@@ -1,0 +1,12 @@
+[submodule "computer/lib/opencv"]
+	path = computer/lib/opencv
+	url = https://github.com/opencv/opencv.git
+  depth = 1
+[submodule "computer/lib/fmt"]
+	path = computer/lib/fmt
+	url = https://github.com/fmtlib/fmt.git
+  depth = 1
+[submodule "computer/lib/sdl"]
+	path = computer/lib/sdl
+	url = https://github.com/libsdl-org/SDL.git
+  depth = 1
