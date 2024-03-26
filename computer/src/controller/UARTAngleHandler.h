@@ -1,30 +1,33 @@
+#pragma once
+#include "serialib.h"
 #include <cstdint>
+#include <mutex>
+#include <string>
 
 class UARTAngleHandler {
 public:
   // Constructor
   UARTAngleHandler();
+
   // Destructor
   ~UARTAngleHandler();
 
   // Method to receive the angle from the UART
-  void receiveAngles();
+  void ReceiveAngles();
 
   // Method to send the angle to the UART
-  void sendAngles();
-
-  // Method to get the pan angle
-  int16_t getPanAngle();
+  void SendAngles() const;
 
   // Method to get the tilt angle
-  int16_t getTiltAngle();
+  std::pair<int16_t, int16_t> GetAngles() const;
 
   // Method to set the pan angle
-  void setPanAngle(int16_t targetAngle);
-
-  // Method to set the tilt angle
-  void setTiltAngle(int16_t targetAngle);
+  void SetAngles(int16_t targetPanAngle, int16_t targetTiltAngle);
 
 private:
+  std::string FindSerialDevice();
+
+  serialib m_serialConnection;
   int16_t m_panAngle, m_tiltAngle;
+  mutable std::mutex m_angleMutex;
 };
