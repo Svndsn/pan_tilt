@@ -1,8 +1,5 @@
 #pragma once
 
-// The leniency of shouldUpdateData(), in microseconds
-#define DATA_UPDATE_POLL_TOLERANCE 5
-
 typedef struct {
   float roll;
   float pitch;

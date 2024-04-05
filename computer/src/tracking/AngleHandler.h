@@ -4,13 +4,15 @@
 #include <mutex>
 #include <string>
 
-class UARTAngleHandler {
+enum class Angle { Tilt, Pan };
+
+class AngleHandler {
 public:
   // Constructor
-  UARTAngleHandler();
+  AngleHandler();
 
   // Destructor
-  ~UARTAngleHandler();
+  ~AngleHandler();
 
   // Method to receive the angle from the UART
   void ReceiveAngles();
@@ -24,10 +26,16 @@ public:
   // Method to set the pan angle
   void SetAngles(int16_t targetPanAngle, int16_t targetTiltAngle);
 
-private:
-  std::string FindSerialDevice();
+  // Method to set relative angles
+  void SetRelativeAngles(int16_t panAngle, int16_t tiltAngle);
 
-  serialib m_serialConnection;
-  int16_t m_panAngle, m_tiltAngle;
+private:
+  std::string FindSerialDevice() const;
+
+  void SendAngleUART(Angle type) const;
+  void ReceiveAnglesUART();
+
+  mutable serialib m_serialConnection;
+  int16_t m_axisRightX, m_tiltAngle;
   mutable std::mutex m_angleMutex;
 };

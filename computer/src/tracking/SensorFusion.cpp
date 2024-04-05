@@ -1,7 +1,5 @@
 #include "SensorFusion.h"
-#include "fmt/core.h"
 #include <assert.h>
-#include <cstdlib>
 #include <math.h>
 
 #define PI 3.14159265359
@@ -29,7 +27,6 @@ void SensorFusion::ResetAngles() {
 
 void SensorFusion::getAngles(Axis &accel, Axis &gyro, float Ts,
                              Axis *angleOutputs) {
-  fmt::print("Ts: {}\n", Ts);
   // Subtract offsets bias
   gyro.pitch = abs(gyro.pitch) < m_gyroBias ? 0 : gyro.pitch;
   gyro.roll = abs(gyro.roll) < m_gyroBias ? 0 : gyro.roll;

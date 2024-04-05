@@ -9,6 +9,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Build parallel
 set(CMAKE_BUILD_PARALLEL_LEVEL 10)
 
+set(CMAKE_C_COMPILER /opt/homebrew/Cellar/llvm/17.0.6_1/bin/clang)
+set(CMAKE_CXX_COMPILER /opt/homebrew/Cellar/llvm/17.0.6_1/bin/clang++)
+
 add_subdirectory(lib)
 add_subdirectory(src)
 

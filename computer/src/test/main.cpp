@@ -6,7 +6,6 @@
 #include "SensorFusion.h"
 #include "fmt/core.h"
 #include "math.h"
-#include <cstdint>
 
 #define FPS 5
 #define FRAME_TIME 1000 / FPS
@@ -21,11 +20,11 @@ int main() {
   SDL_SetGamepadSensorEnabled(gamepad, SDL_SENSOR_GYRO, true);
   SDL_SetGamepadSensorEnabled(gamepad, SDL_SENSOR_ACCEL, true);
 
-  SensorFusion fusion(0.95, 0.f, 0.f, 0.f);
+  SensorFusion fusion(0.99f, 0.003f, 0.0f);
 
-  ThreeAxis gyroData;
-  ThreeAxis accelData;
-  ThreeAxis angles;
+  Axis gyroData;
+  Axis accelData;
+  Axis angles;
 
   Uint64 lastTime = 0;
   bool firstRun = true;
@@ -52,12 +51,14 @@ int main() {
             accelData.pitch = event.gsensor.data[0];
             accelData.yaw = event.gsensor.data[1];
             accelData.roll = event.gsensor.data[2];
+            fmt::print("LastTime: {}\n",
+                       (event.gsensor.timestamp - lastTime) * NS_TO_SEC);
             fusion.getAngles(accelData, gyroData,
                              (float)(event.gsensor.timestamp - lastTime) *
                                  NS_TO_SEC,
                              &angles);
-            fmt::print("Pitch: {:8.5}, Roll: {:8.5}, Yaw: {:8.5}\n",
-                       angles.pitch, angles.roll, angles.yaw);
+            // fmt::print("Pitch: {:4.0f}, Roll: {:4.0f}, Yaw: {:4.0f}\n",
+            //            angles.pitch, angles.roll, angles.yaw);
             lastTime = event.gsensor.timestamp;
           }
         }
