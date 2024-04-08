@@ -31,9 +31,8 @@
 void delay_ms(int time_ms)
 /* calculations are based on 16MHz system clock frequency */
 {
-    int i, j;
+    volatile int i, j;
     for(i = 0 ; i < time_ms; i++)
-        for(j = 0; j < 3180; j++)
             {}  /* execute NOP for 1ms */
 }
 /****************************** End Of Module *******************************/

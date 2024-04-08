@@ -34,6 +34,8 @@ void SPI1_init(void);
 *   Output   : -
 *   Function : Test function
 ******************************************************************************/
+void SPI1_Write(unsigned char);
+void SPI1_Read(unsigned char *data);
 
 
 #endif /*SPI1_H_*/
