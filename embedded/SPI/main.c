@@ -33,17 +33,19 @@ unsigned char led_on;
 int main(void) {
   SPI1_init();
   LED_init();
-  unsigned char val1 = 'U';
+  unsigned char val1 = 'U'; // 0b01010101
 
   while (1) {
 
     if ((GPIO_PORTF_DATA_R & (1 << 4)) == 0) // Check if SW1 is pressed
     {
+      // Turn on red led
       GPIO_PORTF_DATA_R |= (1 << 1);
       SPI1_Write(val1);
-      // delay_ms(1000);
-      while((GPIO_PORTF_DATA_R & (1 << 4)) == 0);
+      while ((GPIO_PORTF_DATA_R & (1 << 4)) == 0)
+        ;// Only send one value pr. press
     } else {
+      // Turn off red led
       GPIO_PORTF_DATA_R &= ~(1 << 1);
     }
   }

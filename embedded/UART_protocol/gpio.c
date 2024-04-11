@@ -22,7 +22,6 @@
 /***************** Constants ******************/
 /***************** Variables ******************/
 /***************** Functions ******************/
-void set_led_color(enum LED_Color color) { GPIO_PORTF_DATA_R = color << 1; }
 
 void setup_gpio(void) {
   // Enable the GPIO port that is used for the on-board LEDs and switches.
@@ -85,4 +84,6 @@ void setup_gpio(void) {
   UART0_CTL_R |=
       (UART_CTL_RXE | UART_CTL_TXE | UART_CTL_UARTEN); // Enable UART0
 }
+
+void set_led_color(LED_Color color) { GPIO_PORTF_DATA_R = color << 1; }
 /***************** End of module **************/

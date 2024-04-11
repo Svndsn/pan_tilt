@@ -21,7 +21,6 @@ private:
   float m_accelBias;
   float m_gyroBias;
 
-  float m_pitch;
-  float m_roll;
-  float m_yaw;
+  Axis m_angle;
+  Axis m_prevGyroMesure;
 };

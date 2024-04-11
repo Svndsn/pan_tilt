@@ -1,5 +1,5 @@
 # SPI communication
-## Mode
+## Mode 0
 - CLK low when idle
 - MOSI and MISO low when idle
 - SS high when idle 
