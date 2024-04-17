@@ -1,0 +1,10 @@
+v 4
+file . "spi_test.vhdl" "f793f98dd3aba3eabd6baec708cd4d6c1f4e0e44" "20240417073728.791":
+  entity spi_test at 1( 0) + 0 on 55;
+  architecture behavioral of spi_test at 15( 344) + 0 on 56;
+file . "spi_tb.vhdl" "9153d9321e951d080fc9cdc9e2ffaf1ea812fa84" "20240417073728.789":
+  entity spi_tb at 1( 0) + 0 on 53;
+  architecture behave of spi_tb at 9( 120) + 0 on 54;
+file . "spi.vhdl" "3d9598c42fdc08e2efb23170ddaf0b4414622fec" "20240417073728.778":
+  entity spi at 1( 0) + 0 on 51;
+  architecture behavioral of spi at 19( 546) + 0 on 52;

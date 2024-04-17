@@ -32,7 +32,9 @@ typedef enum {
   SW1,
   SW2
 } input_port;
+
 typedef enum { ENA, IN1A, IN2A, ENB, IN1B, IN2B } output_port;
+
 typedef enum {
   OFF = 0b000,
   GREEN = 0b100,
@@ -47,7 +49,6 @@ typedef enum {
 /***************** Functions ******************/
 extern void set_led_color( LED_Color color);
 extern void setup_gpio(void);
-extern void setup_uart0(void);
 extern void set_port(output_port port, INT8U value);
 extern INT8U get_port(input_port port);
 /***********************************************
