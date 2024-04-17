@@ -1,0 +1,1 @@
+32768 is when the index sensor is triggered, then it counts up or down
