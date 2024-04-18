@@ -71,23 +71,23 @@ int main(void) {
   // Loop forever.
   while (1) {
     if (get_port(SW1) == 0) {
-      set_port(ENA, 1);
-      set_port(IN1A, 1);
+      set_port(ENB, 1);
+      set_port(IN1B, 1);
       ticks = 0;
       while (get_port(SW1) == 0) {
       }
     } else if (get_port(SW2) == 0) {
-      set_port(ENA, 1);
-      set_port(IN2A, 1);
+      set_port(ENB, 1);
+      set_port(IN2B, 1);
       ticks = 0;
       while (get_port(SW2) == 0) {
       }
     } else {
-      set_port(ENA, 0);
-      set_port(IN1A, 0);
-      set_port(IN2A, 0);
+      set_port(ENB, 0);
+      set_port(IN1B, 0);
+      set_port(IN2B, 0);
     }
-    if(get_port(Index1)){
+    if(get_port(Index0)){
       set_led_color(RED);
     } else{
       set_led_color(BLUE);
