@@ -1,0 +1,579 @@
+{
+  "design": {
+    "design_info": {
+      "boundary_crc": "0x35592E5035592E5",
+      "device": "xc7z020clg400-1",
+      "gen_directory": "../../../../board_conn.gen/sources_1/bd/main_program",
+      "name": "main_program",
+      "rev_ctrl_bd_flag": "RevCtrlBdOff",
+      "synth_flow_mode": "Hierarchical",
+      "tool_version": "2023.2",
+      "validated": "true"
+    },
+    "design_tree": {
+      "xlconstant_1": "",
+      "pwm_wrapper_TILT": "",
+      "ClockDivider_100000Hz": "",
+      "pwm_wrapper_PAN": "",
+      "demux2_1_wrapper_0": "",
+      "demux2_1_wrapper_1": "",
+      "not_gate_0": "",
+      "encoder_interface_PAN": "",
+      "encoder_interface_TILT": "",
+      "not_gate_1": "",
+      "not_gate_2": "",
+      "encoder_signal_PAN": "",
+      "encoder_signal_TILT": "",
+      "xlconstant_0": ""
+    },
+    "ports": {
+      "clk": {
+        "direction": "I"
+      },
+      "sw1": {
+        "direction": "I"
+      },
+      "sw0": {
+        "direction": "I"
+      },
+      "IN1_A": {
+        "direction": "O"
+      },
+      "IN2_A": {
+        "direction": "O"
+      },
+      "IN1_B": {
+        "direction": "O"
+      },
+      "IN2_B": {
+        "direction": "O"
+      },
+      "EN_B": {
+        "direction": "O"
+      },
+      "EN_A": {
+        "direction": "O"
+      },
+      "Hall_Sensor1_A_Vout": {
+        "direction": "I"
+      },
+      "Hall_Sensor2_A_Vout": {
+        "direction": "I"
+      },
+      "Hall_Sensor1_B_Vout": {
+        "direction": "I"
+      },
+      "Hall_Sensor2_B_Vout": {
+        "direction": "I"
+      },
+      "Hall_Index_0": {
+        "direction": "I"
+      },
+      "Hall_Index_1": {
+        "direction": "I"
+      },
+      "ar0": {
+        "direction": "O"
+      },
+      "ar1": {
+        "direction": "O"
+      }
+    },
+    "components": {
+      "xlconstant_1": {
+        "vlnv": "xilinx.com:ip:xlconstant:1.1",
+        "ip_revision": "8",
+        "xci_name": "main_program_xlconstant_1_0",
+        "xci_path": "ip\\main_program_xlconstant_1_0\\main_program_xlconstant_1_0.xci",
+        "inst_hier_path": "xlconstant_1",
+        "parameters": {
+          "CONST_VAL": {
+            "value": "500"
+          },
+          "CONST_WIDTH": {
+            "value": "27"
+          }
+        }
+      },
+      "pwm_wrapper_TILT": {
+        "vlnv": "xilinx.com:module_ref:pwm_wrapper:1.0",
+        "ip_revision": "1",
+        "xci_name": "main_program_pwm_wrapper_0_2",
+        "xci_path": "ip\\main_program_pwm_wrapper_0_2\\main_program_pwm_wrapper_0_2.xci",
+        "inst_hier_path": "pwm_wrapper_TILT",
+        "reference_info": {
+          "ref_type": "hdl",
+          "ref_name": "pwm_wrapper",
+          "boundary_crc": "0x0"
+        },
+        "ports": {
+          "clk": {
+            "type": "clk",
+            "direction": "I"
+          },
+          "duty_cycle": {
+            "direction": "I",
+            "left": "26",
+            "right": "0"
+          },
+          "en": {
+            "direction": "I"
+          },
+          "pwm": {
+            "direction": "O"
+          }
+        }
+      },
+      "ClockDivider_100000Hz": {
+        "vlnv": "xilinx.com:module_ref:ClockDivider:1.0",
+        "ip_revision": "1",
+        "xci_name": "main_program_ClockDivider_0_2",
+        "xci_path": "ip\\main_program_ClockDivider_0_2\\main_program_ClockDivider_0_2.xci",
+        "inst_hier_path": "ClockDivider_100000Hz",
+        "parameters": {
+          "DIVISOR": {
+            "value": "0x00004E2"
+          }
+        },
+        "reference_info": {
+          "ref_type": "hdl",
+          "ref_name": "ClockDivider",
+          "boundary_crc": "0x0"
+        },
+        "ports": {
+          "CLK_IN": {
+            "direction": "I"
+          },
+          "CLK_OUT": {
+            "direction": "O"
+          }
+        }
+      },
+      "pwm_wrapper_PAN": {
+        "vlnv": "xilinx.com:module_ref:pwm_wrapper:1.0",
+        "ip_revision": "1",
+        "xci_name": "main_program_pwm_wrapper_1_0",
+        "xci_path": "ip\\main_program_pwm_wrapper_1_0\\main_program_pwm_wrapper_1_0.xci",
+        "inst_hier_path": "pwm_wrapper_PAN",
+        "reference_info": {
+          "ref_type": "hdl",
+          "ref_name": "pwm_wrapper",
+          "boundary_crc": "0x0"
+        },
+        "ports": {
+          "clk": {
+            "type": "clk",
+            "direction": "I"
+          },
+          "duty_cycle": {
+            "direction": "I",
+            "left": "26",
+            "right": "0"
+          },
+          "en": {
+            "direction": "I"
+          },
+          "pwm": {
+            "direction": "O"
+          }
+        }
+      },
+      "demux2_1_wrapper_0": {
+        "vlnv": "xilinx.com:module_ref:demux2_1_wrapper:1.0",
+        "ip_revision": "1",
+        "xci_name": "main_program_demux2_1_wrapper_0_0",
+        "xci_path": "ip\\main_program_demux2_1_wrapper_0_0\\main_program_demux2_1_wrapper_0_0.xci",
+        "inst_hier_path": "demux2_1_wrapper_0",
+        "reference_info": {
+          "ref_type": "hdl",
+          "ref_name": "demux2_1_wrapper",
+          "boundary_crc": "0x0"
+        },
+        "ports": {
+          "i": {
+            "direction": "I"
+          },
+          "out0": {
+            "direction": "O"
+          },
+          "out1": {
+            "direction": "O"
+          },
+          "sel": {
+            "direction": "I"
+          }
+        }
+      },
+      "demux2_1_wrapper_1": {
+        "vlnv": "xilinx.com:module_ref:demux2_1_wrapper:1.0",
+        "ip_revision": "1",
+        "xci_name": "main_program_demux2_1_wrapper_1_0",
+        "xci_path": "ip\\main_program_demux2_1_wrapper_1_0\\main_program_demux2_1_wrapper_1_0.xci",
+        "inst_hier_path": "demux2_1_wrapper_1",
+        "reference_info": {
+          "ref_type": "hdl",
+          "ref_name": "demux2_1_wrapper",
+          "boundary_crc": "0x0"
+        },
+        "ports": {
+          "i": {
+            "direction": "I"
+          },
+          "out0": {
+            "direction": "O"
+          },
+          "out1": {
+            "direction": "O"
+          },
+          "sel": {
+            "direction": "I"
+          }
+        }
+      },
+      "not_gate_0": {
+        "vlnv": "xilinx.com:module_ref:not_gate:1.0",
+        "ip_revision": "1",
+        "xci_name": "main_program_not_gate_0_0",
+        "xci_path": "ip\\main_program_not_gate_0_0\\main_program_not_gate_0_0.xci",
+        "inst_hier_path": "not_gate_0",
+        "reference_info": {
+          "ref_type": "hdl",
+          "ref_name": "not_gate",
+          "boundary_crc": "0x0"
+        },
+        "ports": {
+          "a": {
+            "direction": "I"
+          },
+          "o": {
+            "direction": "O"
+          }
+        }
+      },
+      "encoder_interface_PAN": {
+        "vlnv": "xilinx.com:module_ref:encoder_interface:1.0",
+        "ip_revision": "1",
+        "xci_name": "main_program_encoder_interface_0_0",
+        "xci_path": "ip\\main_program_encoder_interface_0_0\\main_program_encoder_interface_0_0.xci",
+        "inst_hier_path": "encoder_interface_PAN",
+        "reference_info": {
+          "ref_type": "hdl",
+          "ref_name": "encoder_interface",
+          "boundary_crc": "0x0"
+        },
+        "ports": {
+          "rst": {
+            "type": "rst",
+            "direction": "I"
+          },
+          "a": {
+            "direction": "I"
+          },
+          "b": {
+            "direction": "I"
+          },
+          "cnt": {
+            "direction": "O",
+            "left": "9",
+            "right": "0"
+          }
+        }
+      },
+      "encoder_interface_TILT": {
+        "vlnv": "xilinx.com:module_ref:encoder_interface:1.0",
+        "ip_revision": "1",
+        "xci_name": "main_program_encoder_interface_0_1",
+        "xci_path": "ip\\main_program_encoder_interface_0_1\\main_program_encoder_interface_0_1.xci",
+        "inst_hier_path": "encoder_interface_TILT",
+        "reference_info": {
+          "ref_type": "hdl",
+          "ref_name": "encoder_interface",
+          "boundary_crc": "0x0"
+        },
+        "ports": {
+          "rst": {
+            "type": "rst",
+            "direction": "I"
+          },
+          "a": {
+            "direction": "I"
+          },
+          "b": {
+            "direction": "I"
+          },
+          "cnt": {
+            "direction": "O",
+            "left": "9",
+            "right": "0"
+          }
+        }
+      },
+      "not_gate_1": {
+        "vlnv": "xilinx.com:module_ref:not_gate:1.0",
+        "ip_revision": "1",
+        "xci_name": "main_program_not_gate_1_0",
+        "xci_path": "ip\\main_program_not_gate_1_0\\main_program_not_gate_1_0.xci",
+        "inst_hier_path": "not_gate_1",
+        "reference_info": {
+          "ref_type": "hdl",
+          "ref_name": "not_gate",
+          "boundary_crc": "0x0"
+        },
+        "ports": {
+          "a": {
+            "direction": "I"
+          },
+          "o": {
+            "direction": "O"
+          }
+        }
+      },
+      "not_gate_2": {
+        "vlnv": "xilinx.com:module_ref:not_gate:1.0",
+        "ip_revision": "1",
+        "xci_name": "main_program_not_gate_1_1",
+        "xci_path": "ip\\main_program_not_gate_1_1\\main_program_not_gate_1_1.xci",
+        "inst_hier_path": "not_gate_2",
+        "reference_info": {
+          "ref_type": "hdl",
+          "ref_name": "not_gate",
+          "boundary_crc": "0x0"
+        },
+        "ports": {
+          "a": {
+            "direction": "I"
+          },
+          "o": {
+            "direction": "O"
+          }
+        }
+      },
+      "encoder_signal_PAN": {
+        "vlnv": "xilinx.com:module_ref:pwm_wrapper:1.0",
+        "ip_revision": "1",
+        "xci_name": "main_program_pwm_wrapper_0_3",
+        "xci_path": "ip\\main_program_pwm_wrapper_0_3\\main_program_pwm_wrapper_0_3.xci",
+        "inst_hier_path": "encoder_signal_PAN",
+        "reference_info": {
+          "ref_type": "hdl",
+          "ref_name": "pwm_wrapper",
+          "boundary_crc": "0x0"
+        },
+        "ports": {
+          "clk": {
+            "type": "clk",
+            "direction": "I"
+          },
+          "duty_cycle": {
+            "direction": "I",
+            "left": "26",
+            "right": "0"
+          },
+          "en": {
+            "direction": "I"
+          },
+          "pwm": {
+            "direction": "O"
+          }
+        }
+      },
+      "encoder_signal_TILT": {
+        "vlnv": "xilinx.com:module_ref:pwm_wrapper:1.0",
+        "ip_revision": "1",
+        "xci_name": "main_program_pwm_wrapper_1_1",
+        "xci_path": "ip\\main_program_pwm_wrapper_1_1\\main_program_pwm_wrapper_1_1.xci",
+        "inst_hier_path": "encoder_signal_TILT",
+        "reference_info": {
+          "ref_type": "hdl",
+          "ref_name": "pwm_wrapper",
+          "boundary_crc": "0x0"
+        },
+        "ports": {
+          "clk": {
+            "type": "clk",
+            "direction": "I"
+          },
+          "duty_cycle": {
+            "direction": "I",
+            "left": "26",
+            "right": "0"
+          },
+          "en": {
+            "direction": "I"
+          },
+          "pwm": {
+            "direction": "O"
+          }
+        }
+      },
+      "xlconstant_0": {
+        "vlnv": "xilinx.com:ip:xlconstant:1.1",
+        "ip_revision": "8",
+        "xci_name": "main_program_xlconstant_0_0",
+        "xci_path": "ip\\main_program_xlconstant_0_0\\main_program_xlconstant_0_0.xci",
+        "inst_hier_path": "xlconstant_0"
+      }
+    },
+    "nets": {
+      "ClockDivider_0_CLK_OUT": {
+        "ports": [
+          "ClockDivider_100000Hz/CLK_OUT",
+          "pwm_wrapper_TILT/clk",
+          "pwm_wrapper_PAN/clk",
+          "encoder_signal_PAN/clk",
+          "encoder_signal_TILT/clk"
+        ]
+      },
+      "Hall_Index_0_1": {
+        "ports": [
+          "Hall_Index_0",
+          "not_gate_1/a"
+        ]
+      },
+      "Hall_Index_1_1": {
+        "ports": [
+          "Hall_Index_1",
+          "not_gate_2/a"
+        ]
+      },
+      "Hall_Sensor1_A_Vout_1": {
+        "ports": [
+          "Hall_Sensor1_A_Vout",
+          "encoder_interface_PAN/a"
+        ]
+      },
+      "Hall_Sensor1_B_Vout_1": {
+        "ports": [
+          "Hall_Sensor1_B_Vout",
+          "encoder_interface_PAN/b"
+        ]
+      },
+      "Hall_Sensor2_A_Vout_1": {
+        "ports": [
+          "Hall_Sensor2_A_Vout",
+          "encoder_interface_TILT/a"
+        ]
+      },
+      "Hall_Sensor2_B_Vout_1": {
+        "ports": [
+          "Hall_Sensor2_B_Vout",
+          "encoder_interface_TILT/b"
+        ]
+      },
+      "clk_1": {
+        "ports": [
+          "clk",
+          "ClockDivider_100000Hz/CLK_IN"
+        ]
+      },
+      "demux2_1_wrapper_0_out0": {
+        "ports": [
+          "demux2_1_wrapper_0/out0",
+          "IN1_A"
+        ]
+      },
+      "demux2_1_wrapper_0_out1": {
+        "ports": [
+          "demux2_1_wrapper_0/out1",
+          "IN2_A"
+        ]
+      },
+      "demux2_1_wrapper_1_out0": {
+        "ports": [
+          "demux2_1_wrapper_1/out0",
+          "IN1_B"
+        ]
+      },
+      "demux2_1_wrapper_1_out1": {
+        "ports": [
+          "demux2_1_wrapper_1/out1",
+          "IN2_B"
+        ]
+      },
+      "encoder_interface_MotorA_cnt": {
+        "ports": [
+          "encoder_interface_PAN/cnt",
+          "encoder_signal_PAN/duty_cycle"
+        ]
+      },
+      "encoder_interface_MotorB_cnt": {
+        "ports": [
+          "encoder_interface_TILT/cnt",
+          "encoder_signal_TILT/duty_cycle"
+        ]
+      },
+      "encoder_signal_PAN_pwm": {
+        "ports": [
+          "encoder_signal_PAN/pwm",
+          "ar0"
+        ]
+      },
+      "encoder_signal_TILT_pwm": {
+        "ports": [
+          "encoder_signal_TILT/pwm",
+          "ar1"
+        ]
+      },
+      "not_gate_0_o": {
+        "ports": [
+          "not_gate_0/o",
+          "EN_A",
+          "pwm_wrapper_TILT/en"
+        ]
+      },
+      "not_gate_1_o": {
+        "ports": [
+          "not_gate_1/o",
+          "encoder_interface_PAN/rst"
+        ]
+      },
+      "not_gate_2_o": {
+        "ports": [
+          "not_gate_2/o",
+          "encoder_interface_TILT/rst"
+        ]
+      },
+      "pwm_wrapper_0_pwm": {
+        "ports": [
+          "pwm_wrapper_TILT/pwm",
+          "demux2_1_wrapper_0/i"
+        ]
+      },
+      "pwm_wrapper_1_pwm": {
+        "ports": [
+          "pwm_wrapper_PAN/pwm",
+          "demux2_1_wrapper_1/i"
+        ]
+      },
+      "sw0_1": {
+        "ports": [
+          "sw0",
+          "demux2_1_wrapper_1/sel",
+          "demux2_1_wrapper_0/sel"
+        ]
+      },
+      "sw1_1": {
+        "ports": [
+          "sw1",
+          "not_gate_0/a",
+          "EN_B",
+          "pwm_wrapper_PAN/en"
+        ]
+      },
+      "xlconstant_0_dout": {
+        "ports": [
+          "xlconstant_0/dout",
+          "encoder_signal_PAN/en",
+          "encoder_signal_TILT/en"
+        ]
+      },
+      "xlconstant_1_dout": {
+        "ports": [
+          "xlconstant_1/dout",
+          "pwm_wrapper_TILT/duty_cycle",
+          "pwm_wrapper_PAN/duty_cycle"
+        ]
+      }
+    }
+  }
+}

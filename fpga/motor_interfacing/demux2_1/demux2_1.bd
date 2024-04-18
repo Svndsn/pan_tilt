@@ -1,0 +1,135 @@
+{
+  "design": {
+    "design_info": {
+      "boundary_crc": "0x91F3FA3491F3FA34",
+      "device": "xc7z020clg400-1",
+      "gen_directory": "../../../../board_conn.gen/sources_1/bd/demux2_1",
+      "name": "demux2_1",
+      "rev_ctrl_bd_flag": "RevCtrlBdOff",
+      "synth_flow_mode": "Hierarchical",
+      "tool_version": "2023.2",
+      "validated": "true"
+    },
+    "design_tree": {
+      "not_gate_0": "",
+      "and_gate_0": "",
+      "and_gate_1": ""
+    },
+    "ports": {
+      "sel": {
+        "direction": "I"
+      },
+      "i": {
+        "direction": "I"
+      },
+      "out0": {
+        "direction": "O"
+      },
+      "out1": {
+        "direction": "O"
+      }
+    },
+    "components": {
+      "not_gate_0": {
+        "vlnv": "xilinx.com:module_ref:not_gate:1.0",
+        "ip_revision": "1",
+        "xci_name": "demux2_1_not_gate_0_0",
+        "xci_path": "ip\\demux2_1_not_gate_0_0\\demux2_1_not_gate_0_0.xci",
+        "inst_hier_path": "not_gate_0",
+        "reference_info": {
+          "ref_type": "hdl",
+          "ref_name": "not_gate",
+          "boundary_crc": "0x0"
+        },
+        "ports": {
+          "a": {
+            "direction": "I"
+          },
+          "o": {
+            "direction": "O"
+          }
+        }
+      },
+      "and_gate_0": {
+        "vlnv": "xilinx.com:module_ref:and_gate:1.0",
+        "ip_revision": "1",
+        "xci_name": "demux2_1_and_gate_0_0",
+        "xci_path": "ip\\demux2_1_and_gate_0_0\\demux2_1_and_gate_0_0.xci",
+        "inst_hier_path": "and_gate_0",
+        "reference_info": {
+          "ref_type": "hdl",
+          "ref_name": "and_gate",
+          "boundary_crc": "0x0"
+        },
+        "ports": {
+          "a": {
+            "direction": "I"
+          },
+          "b": {
+            "direction": "I"
+          },
+          "o": {
+            "direction": "O"
+          }
+        }
+      },
+      "and_gate_1": {
+        "vlnv": "xilinx.com:module_ref:and_gate:1.0",
+        "ip_revision": "1",
+        "xci_name": "demux2_1_and_gate_1_0",
+        "xci_path": "ip\\demux2_1_and_gate_1_0\\demux2_1_and_gate_1_0.xci",
+        "inst_hier_path": "and_gate_1",
+        "reference_info": {
+          "ref_type": "hdl",
+          "ref_name": "and_gate",
+          "boundary_crc": "0x0"
+        },
+        "ports": {
+          "a": {
+            "direction": "I"
+          },
+          "b": {
+            "direction": "I"
+          },
+          "o": {
+            "direction": "O"
+          }
+        }
+      }
+    },
+    "nets": {
+      "and_gate_0_o": {
+        "ports": [
+          "and_gate_0/o",
+          "out1"
+        ]
+      },
+      "and_gate_1_o": {
+        "ports": [
+          "and_gate_1/o",
+          "out0"
+        ]
+      },
+      "in1_1": {
+        "ports": [
+          "i",
+          "and_gate_0/b",
+          "and_gate_1/b"
+        ]
+      },
+      "not_gate_0_o": {
+        "ports": [
+          "not_gate_0/o",
+          "and_gate_1/a"
+        ]
+      },
+      "sel_1": {
+        "ports": [
+          "sel",
+          "not_gate_0/a",
+          "and_gate_0/a"
+        ]
+      }
+    }
+  }
+}
