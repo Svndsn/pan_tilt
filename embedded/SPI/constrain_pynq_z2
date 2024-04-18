@@ -99,7 +99,7 @@ set_property -dict { PACKAGE_PIN V13   IOSTANDARD LVCMOS33 } [get_ports { SS }];
 set_property PULLUP true [get_ports {SS}];
 
 set_property -dict { PACKAGE_PIN V15   IOSTANDARD LVCMOS33 } [get_ports { MISO }]; #IO_L10P_T1_34 Sch=ar[4]
-
+#set_property PULLDOWN true [get_ports {MISO}];
 
 set_property -dict { PACKAGE_PIN T15   IOSTANDARD LVCMOS33 } [get_ports { MOSI }]; #IO_L5N_T0_34 Sch=ar[5]
 
