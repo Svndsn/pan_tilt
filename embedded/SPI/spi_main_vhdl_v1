@@ -1,0 +1,42 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity SPI_Slave is
+    Port(
+        clk : in STD_LOGIC;
+        SS : inout STD_LOGIC;       --AR3
+        MOSI : in STD_LOGIC;        --AR5
+        MISO : out STD_LOGIC;       --AR4
+        Tiva_SCLK : in STD_LOGIC    --AR7
+        );
+end SPI_Slave;
+
+architecture Behavioral of SPI_Slave is
+    signal data : std_logic_vector (7 downto 0);
+    signal addr : std_logic_vector (7 downto 0);
+    signal prev_Tiva_SCLK : std_logic := '0';
+    signal edge_detected : std_logic := '0';
+
+begin
+    process(clk)
+        begin
+            if SS = '0' then
+                if Tiva_SCLK = '1' and prev_Tiva_SCLK = '0' then
+                    edge_detected <= '1';
+                else
+                    edge_detected <= '0';
+                end if;
+            
+                if edge_detected = '1' then
+                    data <= data(6 downto 0) & MOSI;
+                end if;
+                prev_Tiva_SCLK <= Tiva_SCLK;
+            end if;
+            
+            if data = "01010101" then
+                addr <= data;
+                MISO <= addr(7);
+                addr <= addr(6 downto 0) & '0';
+            end if;
+    end process;
+end Behavioral;
