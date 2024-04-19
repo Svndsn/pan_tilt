@@ -1,7 +1,0 @@
-v 4
-file . "spi_tb.vhdl" "2ef01ea6ea66331083653a28c1be13e3432aebe6" "20240416203452.796":
-  entity spi_tb at 1( 0) + 0 on 21;
-  architecture behave of spi_tb at 9( 120) + 0 on 22;
-file . "spi.vhdl" "8a444bfbe6da92e2c9f7d2fac2e21dcec3a334b5" "20240416203452.793":
-  entity spi_slave at 9( 438) + 0 on 19;
-  architecture rtl of spi_slave at 37( 1675) + 0 on 20;

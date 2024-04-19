@@ -24,8 +24,8 @@
 /***************** Defines ********************/
 
 /***************** Constants ******************/
-volatile INT16U panCount = 0;
-volatile INT16U tiltCount = 0;
+volatile INT16U panCount = 32768;
+volatile INT16U tiltCount = 32768;
 volatile INT16U ticks = 0;
 /***************** Variables ******************/
 /***************** Functions ******************/
@@ -67,29 +67,56 @@ int main(void) {
   setup_uart0();
   setup_systick();
   // setup_pwm();
+  //
+  INT16U temp_pan = 0;
+  INT16U temp_tilt = 0;
+  INT16U temp_ticks = 0;
+  INT16U temp_last_ticks = -1;
 
   // Loop forever.
   while (1) {
     if (get_port(SW1) == 0) {
-      set_port(ENB, 1);
-      set_port(IN1B, 1);
+      set_port(ENA, 1);
+      set_port(IN1A, 1);
       ticks = 0;
       while (get_port(SW1) == 0) {
+        temp_ticks = ticks;
+        if (temp_ticks % 2 == 0 && temp_last_ticks != temp_ticks) {
+          temp_last_ticks = temp_ticks;
+          temp_tilt = tiltCount;
+          send_char('T');
+          send_char(',');
+          send_count(temp_tilt);
+          send_char(',');
+          send_count(temp_ticks);
+          send_char('\n');
+        }
       }
     } else if (get_port(SW2) == 0) {
-      set_port(ENB, 1);
-      set_port(IN2B, 1);
+      set_port(ENA, 1);
+      set_port(IN2A, 1);
       ticks = 0;
       while (get_port(SW2) == 0) {
+        temp_ticks = ticks;
+        if (temp_ticks % 2 == 0 && temp_last_ticks != temp_ticks) {
+          temp_last_ticks = temp_ticks;
+          temp_tilt = tiltCount;
+          send_char('T');
+          send_char(',');
+          send_count(temp_tilt);
+          send_char(',');
+          send_count(temp_ticks);
+          send_char('\n');
+        }
       }
     } else {
-      set_port(ENB, 0);
-      set_port(IN1B, 0);
-      set_port(IN2B, 0);
+      set_port(ENA, 0);
+      set_port(IN1A, 0);
+      set_port(IN2A, 0);
     }
-    if(get_port(Index0)){
+    if (get_port(Index1)) {
       set_led_color(RED);
-    } else{
+    } else {
       set_led_color(BLUE);
     }
   }
@@ -100,14 +127,12 @@ void GPIOA_handler(void) {
   // Index hall sensor
   if (GPIO_PORTA_MIS_R & 0b00000100) {
     // Pan hall sensor
-    panCount = 32768;
+    // panCount = 32768;
     GPIO_PORTA_ICR_R |= 0b00000100;
-    send_string("RP\n");
   } else if (GPIO_PORTA_MIS_R & 0b00001000) {
     // Tilt hall sensor
-    tiltCount = 32768;
+    // tiltCount = 32768;
     GPIO_PORTA_ICR_R |= 0b00001000;
-    send_string("RT\n");
   }
 }
 
@@ -118,25 +143,15 @@ void GPIOC_handler(void) {
     } else {
       panCount--;
     }
-    send_char('P');
-    send_char(' ');
-    send_count(panCount);
-    send_char(' ');
-    send_count(ticks);
-    send_char('\n');
     GPIO_PORTC_ICR_R |= 0b00010000;
   } else if (GPIO_PORTC_MIS_R & 0b01000000) {
     if (get_port(Sensor2B) == 0) {
       tiltCount++;
+      set_led_color(RED);
     } else {
       tiltCount--;
+      set_led_color(BLUE);
     }
-    send_char('T');
-    send_char(' ');
-    send_count(tiltCount);
-    send_char(' ');
-    send_count(ticks);
-    send_char('\n');
     GPIO_PORTC_ICR_R |= 0b01000000;
   }
 }
