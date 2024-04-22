@@ -24,6 +24,8 @@ architecture Behavioral of SPI_Slave is
 begin
     process(clk)
     begin
+        --This section is to reset the addr data and to pull the slave select line high 
+        --after data has been sent back to the master.
         if rising_edge(clk) then
             if SS /= prev_SS then
                 if SS = '0' then
