@@ -5,6 +5,8 @@
 - PA5 -> ENB (Pan)
 - PA6 -> IN1B (Pan)
 - PA7 -> IN2B (Pan)
+- PB6 -> ENA PWM (Tilt) 
+- PB7 -> ENB PWM (Pan) 
 ## Protection board (inputs)
 - PA2 <- Index0 (Pan) (interrupt)
 - PA3 <- Index1 (Tilt) (interrupt)

@@ -18,6 +18,7 @@ def processFile(file):
         df["Count"] = round(df["Count"] - 32768, 3)
     # Divide by 1000 to convert ms to s
     df["Time"] = df["Time"] / 1000
+    df["Voltage"] = df["Voltage"] / 1000
 
     # Rename count since it's now an angle
     df.rename(columns={"Count": "Angle"}, inplace=True, errors="raise")

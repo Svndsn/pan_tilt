@@ -23,17 +23,24 @@
 #define TRUE 1
 
 typedef enum {
-  Index0,
-  Index1,
-  Sensor1A,
-  Sensor1B,
-  Sensor2A,
-  Sensor2B,
+  Index0, // Pan
+  Index1, // Tilt
+  Sensor1A, // Pan (int)
+  Sensor1B, // Pan 
+  Sensor2A, // Tilt
+  Sensor2B, // Tilt
   SW1,
   SW2
 } input_port;
 
-typedef enum { ENA, IN1A, IN2A, ENB, IN1B, IN2B } output_port;
+typedef enum {
+  ENA, // Tilt
+  IN1A, // Tilt
+  IN2A, // Tilt
+  ENB, // Pan
+  IN1B, // Pan
+  IN2B // Pan
+} output_port;
 
 typedef enum {
   OFF = 0b000,
