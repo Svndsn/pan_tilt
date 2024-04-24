@@ -26,7 +26,9 @@ void setup_gpio(void) {
   // Enable the GPIO ports
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R5; // GPIO Port F // LED and buttons
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R4; // GPIO Port E // H-bridge
+  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R3; // GPIO Port D PWM
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R2; // GPIO Port C // Protection board
+  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R1; // GPIO Port B // Protection board
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R0; // GPIO Port A // H-bridge, Protection board and uart0
 
   // PORTF

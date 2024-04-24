@@ -31,7 +31,6 @@
 void SPI1_init(void)
 {
     /* Enable clock to SPI1, GPIOD and GPIOF */
-
     SYSCTL_RCGCSSI_R |= SYSCTL_RCGCSSI_R1;           /*set clock enabling bit for SPI1 */
     SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R5;          /* enable clock to GPIOD for SPI1 */
     SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R3;          /* enable clock to GPIOF for slave select */
@@ -49,7 +48,7 @@ void SPI1_init(void)
     SSI1_CR1_R = 0;       /* disable SPI1 and configure it as a Master */
     SSI1_CC_R = 0;        /* Enable System clock Option */
     SSI1_CPSR_R = 4;      /* Select prescaler value of 4 .i.e 16MHz/4 = 4MHz */
-    SSI1_CR0_R = 0x00007; /* 4MHz SPI1 clock, SPI mode, 8 bit data */
+    SSI1_CR0_R = 0x0000F; /* 4MHz SPI1 clock, SPI mode, 8 bit data */
     SSI1_CR1_R |= 2;      /* enable SPI1 */
 }
 
