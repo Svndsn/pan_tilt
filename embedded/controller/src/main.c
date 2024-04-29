@@ -6,7 +6,7 @@
 #include "emp_type.h"
 #include "spi1.h"
 #include "status_led.h"
-#include "taskmodel.h"
+#include "projectdefs.h"
 #include "uart0.h"
 
 // UART0 queues
@@ -23,8 +23,6 @@ void setup_hardware() {
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R3; // SPI1
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R0; // UART0
   // Wait for the GPIO port F to be ready
-  while (!(SYSCTL_PRGPIO_R & SYSCTL_PRGPIO_R0)) {
-  }
   vStatus_Led_init();
   vUart_0_init();
   vSpi_1_init();
@@ -42,9 +40,8 @@ int main() {
   q_spi1Rx = xQueueCreate(20, sizeof(INT16U));
 
   // Create the tasks
-  xTaskCreate(vStatus_Led_task, "Status LED", USERTASK_STACK_SIZE, NULL,
-              LOW_PRIO, NULL);
-  xTaskCreate(vUart_0_task, "UART 0 Rx/Tx", USERTASK_STACK_SIZE, NULL, MED_PRIO,
+  xTaskCreate(vStatus_Led_task, "Status LED", USERTASK_STACK_SIZE, NULL, LOW, NULL);
+  xTaskCreate(vUart_0_task, "UART 0 Rx/Tx", USERTASK_STACK_SIZE, NULL, MEDIUM,
               NULL);
   // Start the scheduler
   vTaskStartScheduler();
