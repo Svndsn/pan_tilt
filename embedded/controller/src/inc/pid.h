@@ -20,7 +20,7 @@ typedef struct {
   FP32 prevError;
 } PID_t;
 
-extern void vController_init();
-extern void vController_task();
+extern void vControllerInit();
+extern void vControllerTask();
 
 #endif // _PID_H

@@ -86,7 +86,7 @@ void uart_data_handler(INT8U data, Angle type, INT16S *angle) {
   // ABRSDDDD
   // A: Angle (1 = Pan, 0 = Tilt)
   // B: Bits  (1 = High bits, 0 = Low bits)
-  // R: Request (Data if B=0, Request if B=1)
+  // R: Relative (1 = Relative, 0 = Absolute)
   // S: Sign  (Data if B=0, Sign if B=1)
   // D: Data  (Always)
   // If B=1 and R=1, then it is a request and data is ignored

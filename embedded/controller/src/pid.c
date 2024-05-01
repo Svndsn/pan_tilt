@@ -1,13 +1,13 @@
-#include "FreeRTOS.h"
 #include "pid.h"
-#include "task.h"
-#include "queue.h"
+#include "FreeRTOS.h"
 #include "projectdefs.h"
+#include "queue.h"
+#include "task.h"
 
 PID_t pidPan;
 PID_t pidTilt;
 
-void vController_init() {
+void vControllerInit() {
   // Pan PID
   pidPan.Kp = 0.1f;
   pidPan.Ki = 0.f;
@@ -15,7 +15,7 @@ void vController_init() {
 
   pidPan.T = 0.01f; // 100Hz
 
-  pidPan.maxLimit = 12.f; // 12 volts
+  pidPan.maxLimit = 12.f;  // 12 volts
   pidPan.minLimit = -12.f; // -12 volts
 
   pidPan.prevOutput = 0.f;
@@ -30,7 +30,7 @@ void vController_init() {
 
   pidTilt.T = 0.01f; // 100Hz
 
-  pidTilt.maxLimit = 12.f; // 12 volts
+  pidTilt.maxLimit = 12.f;  // 12 volts
   pidTilt.minLimit = -12.f; // -12 volts
 
   pidTilt.prevOutput = 0.f;
@@ -45,7 +45,7 @@ void vUpdateController(PID_t *pid, FP32 setPoint, FP32 measurement) {
   // Proportional term
   FP32 Pout = pid->Kp * pid->error;
 
-  // Anti-windup 
+  // Anti-windup
   if (pid->prevOutput <= pid->maxLimit && pid->prevOutput >= pid->minLimit) {
     // Only integrate if the last output is within limits
     // Trapezoidal integration
@@ -74,25 +74,24 @@ void vUpdateController(PID_t *pid, FP32 setPoint, FP32 measurement) {
   }
 }
 
-void vController_task(){
-  vController_init();
-  while(1){
+void vControllerTask() {
+  vControllerInit();
+  while (1) {
     // Get current tick for correct timing
     portTickType xLastWakeTime = xTaskGetTickCount();
 
-
-    // Get the latest setpoint (uart0)
-    // Get the latest measurement (SPI0)
-    // Send the latest measurements to the computer (uart0)
-
+    // Get the latest setpoint (take all values from q_uartSetpoint)
+    // Get the latest measurement (take all values from q_spiAngle)
+    // Send the latest measurements to the computer (q_uartAngle)
 
     // Update controller (PID)
 
-
-    // Send the latest output to the motor (SPI0)
-
+    // Send the latest output to the motor (q_spiDutyCycle)
 
     // Make sure the task runs at 100Hz
-    vTaskDelayUntil(&xLastWakeTime, CONTROLLER_PERIOD_TICKS);
+    vTaskDelayUntil(&xLastWakeTime, CONTROLLER_PERIOD_MS / portTICK_RATE_MS);
   }
+
+  // Delete the task if it ever breaks out of the loop above
+  vTaskDelete(NULL);
 }

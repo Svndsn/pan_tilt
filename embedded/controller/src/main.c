@@ -1,31 +1,35 @@
+// FreeRTOS
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "task.h"
-#include "tm4c123gh6pm.h"
 
-#include "emp_type.h"
-#include "spi1.h"
-#include "status_led.h"
+// Project
+#include "tm4c123gh6pm.h"
 #include "projectdefs.h"
+#include "status_led.h"
 #include "uart0.h"
+#include "spi1.h"
+#include "pid.h"
 
 // UART0 queues
-xQueueHandle q_debug; // Debugging queue
-xQueueHandle q_uartTx;
-xQueueHandle q_uartRx;
+xQueueHandle q_uartDebug;
+xQueueHandle q_uartAngle; // Send current angle
+xQueueHandle q_uartSetpoint; // Receive setpoint
+
 // SPI1 queues
-xQueueHandle q_spi1Tx;
-xQueueHandle q_spi1Rx;
+xQueueHandle q_spiDutyCycle; // Send duty cycle
+xQueueHandle q_spiAngle; // Receive angle
 
 void setup_hardware() {
-  // Enable clock for GPIO
+  // Enable clocks
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R5; // Status LED
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R3; // SPI1
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R0; // UART0
-  // Wait for the GPIO port F to be ready
-  vStatus_Led_init();
-  vUart_0_init();
-  vSpi_1_init();
+
+  // Initialize the hardware
+  vStatusLedInit();
+  vUart0Init();
+  vSpi1Init();
 }
 
 int main() {
@@ -33,16 +37,18 @@ int main() {
   setup_hardware();
 
   // Create the queues
-  q_debug = xQueueCreate(20, sizeof(QueueString));
-  q_uartTx = xQueueCreate(20, sizeof(INT8U));
-  q_uartRx = xQueueCreate(20, sizeof(INT8U));
-  q_spi1Tx = xQueueCreate(20, sizeof(INT16U));
-  q_spi1Rx = xQueueCreate(20, sizeof(INT16U));
+  q_uartDebug    = xQueueCreate(20, sizeof(uartDebug_t));
+  q_uartAngle    = xQueueCreate(20, sizeof(uartAngle_t));
+  q_uartSetpoint = xQueueCreate(20, sizeof(uartAngle_t));
+  q_spiDutyCycle = xQueueCreate(20, sizeof(spiDutyCycle_t));
+  q_spiAngle     = xQueueCreate(20, sizeof(spiAngle_t));
 
   // Create the tasks
-  xTaskCreate(vStatus_Led_task, "Status LED", USERTASK_STACK_SIZE, NULL, LOW, NULL);
-  xTaskCreate(vUart_0_task, "UART 0 Rx/Tx", USERTASK_STACK_SIZE, NULL, MEDIUM,
-              NULL);
+  xTaskCreate(vStatusLedTask,  "Status LED",     USERTASK_STACK_SIZE, NULL, LOW, NULL);
+  xTaskCreate(vUart0Task,      "UART 0 Rx/Tx",   USERTASK_STACK_SIZE, NULL, MEDIUM, NULL);
+  xTaskCreate(vSpi1Task,       "SPI 1 Rx/Tx",    USERTASK_STACK_SIZE, NULL, MEDIUM, NULL);
+  xTaskCreate(vControllerTask, "PID controller", USERTASK_STACK_SIZE, NULL, HIGH, NULL);
+
   // Start the scheduler
   vTaskStartScheduler();
   return 0;
