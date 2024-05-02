@@ -92,11 +92,11 @@ void send_protocol(axis angle, INT8S voltage){
     INT16U duty_cycle = 0;
 
     if(angle == PAN){
-        byte |= 0b1000000000000;
+        byte |= 0b1000000000000000;
     }
 
     if(duty_cycle < 0){
-        byte |= 0b0100000000000;
+        byte |= 0b0100000000000000;
         duty_cycle = -duty_cycle;
     }
 
@@ -107,6 +107,23 @@ void send_protocol(axis angle, INT8S voltage){
 
     return byte;
 }
+
+void receive_protocol(INT16S data){
+    INT16U received_data = 0;
+
+    if(data & 0b1000000000000000){
+        received_data |= 0b1000000000000000;
+    }
+
+    if(data & 0b0100000000000000){
+        received_data |= 0b0100000000000000;
+    }
+
+    received_data = data & 0b0000001111111111;
+
+    return received_data;
+}
+
 
 int main(void) {
   SPI1_init();
