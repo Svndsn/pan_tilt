@@ -42,7 +42,6 @@ void send_char(INT8U chr) {
   while (UART0_FR_R & (1 << 5))
     ;
   UART0_DR_R = chr;
-
 }
 
 void send_string(char *str) {
@@ -102,8 +101,7 @@ void send_protocol(axis angle, INT8S voltage){
 
     duty_cycle = voltage_to_duty_cycle(voltage);
 
-    duty_cycle_bits = duty_cycle & 0b0000001111111111;
-    byte |= duty_cycle_bits;
+    byte |= duty_cycle & 0b0000001111111111;
 
     return byte;
 }
