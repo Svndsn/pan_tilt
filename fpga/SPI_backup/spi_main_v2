@@ -79,6 +79,19 @@ INT16U voltage_to_duty_cycle(INT8S voltage){
         return duty_cycle;
     }
 }
+
+INT16U duty_cycle_to_angle(INT16S duty_cycle){
+    int angle = 0;
+
+    if (duty_cycle < 0){
+        duty_cycle = -duty_cycle;
+    }
+
+    angle = (duty_cycle / 450) * 360;
+
+    return angle;
+}
+
 void send_protocol(axis angle, INT8S voltage){
     /* The data packets is constructed of 16 bits:
     * M: Motor selection
@@ -90,11 +103,11 @@ void send_protocol(axis angle, INT8S voltage){
     INT16U byte = 0;
     INT16U duty_cycle = 0;
 
-    if(angle == PAN){
+    if (angle == PAN){
         byte |= 0b1000000000000000;
     }
 
-    if(duty_cycle < 0){
+    if (duty_cycle < 0){
         byte |= 0b0100000000000000;
         duty_cycle = -duty_cycle;
     }
@@ -107,17 +120,20 @@ void send_protocol(axis angle, INT8S voltage){
 }
 
 void receive_protocol(INT16S data){
-    INT16U received_data = 0;
+    INT16S received_data = 0;
+    short motor;
 
-    if(data & 0b1000000000000000){
-        received_data |= 0b1000000000000000;
+    if (data & 0b1000000000000000){
+        motor = "PAN";
+    } else {
+        motor = "TILT";
     }
 
-    if(data & 0b0100000000000000){
+    received_data = duty_cycle_to_angle(data & 0b0000001111111111);
+
+    if (data & 0b0100000000000000){
         received_data |= 0b0100000000000000;
     }
-
-    received_data = data & 0b0000001111111111;
 
     return received_data;
 }
