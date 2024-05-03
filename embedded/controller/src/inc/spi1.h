@@ -5,7 +5,7 @@
 
 typedef struct {
   motorAxis_t axis;
-  INT8S angle;
+  INT16S angle;
 } spiAngle_t;
 
 typedef struct {

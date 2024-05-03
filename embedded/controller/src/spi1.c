@@ -40,20 +40,21 @@ BOOLEAN SPI1_Read(INT16U *data) {
 
 void SPI1_Write(INT16U data) {
   while ((SSI1_SR_R & (1 << 1)) == 0){} // wait until Tx FIFO is not full
-    SSI1_DR_R = data; // transmit byte over SSI1Tx line
+
+  // transmit byte over SSI1Tx line
+  SSI1_DR_R = data; 
 }
 
-// q_spiDutyCycle = xQueueCreate(20, sizeof(spiDutyCycle_t));
-// q_spiAngle     = xQueueCreate(20, sizeof(spiAngle_t));
 void vSpi1Task(void *pvParameters) {
   spiDutyCycle_t dutyCycle;
-  spiAngle_t angle;
+  spiAngle_t panAngle  = {PAN, 0};
+  spiAngle_t tiltAngle = {TILT, 0};
 
   while (1) {
     // Send duty cycle
     while(xQueueReceive(q_spiDutyCycle, &dutyCycle, 0)) {
       // TODO: Implement data encoding
-      INT16U txData;
+      INT16U txData = 0;
       SPI1_Write(txData);
     }
 
@@ -62,10 +63,13 @@ void vSpi1Task(void *pvParameters) {
       // Receive data
       INT16U rxData = SSI1_DR_R;
       // TODO: Implement data decoding
-      xQueueSendToBack(q_spiAngle, &angle, 0);
+      panAngle.angle += 1;
+      tiltAngle.angle += 1;
+      xQueueSendToBack(q_spiAngle, &panAngle, 0);
+      xQueueSendToBack(q_spiAngle, &tiltAngle, 0);
     }
 
-    vTaskDelay(5 / portTICK_PERIOD_MS);
+    vTaskDelay(50 / portTICK_PERIOD_MS);
   }
 
   // Delete the task if it ever breaks out of the loop above

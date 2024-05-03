@@ -1,6 +1,7 @@
 #ifndef _PID_H
 #define _PID_H
 #include "emp_type.h"
+
 typedef struct {
   // PID controller constants
   FP32 Kp, Ki, Kd;
@@ -8,6 +9,12 @@ typedef struct {
   FP32 T;
   // Motor voltage limits
   FP32 maxLimit, minLimit;
+  // Measurement
+  FP32 measurement;
+  // Setpoint
+  FP32 setpoint;
+  // Prev
+  FP32 prevSetpoint;
   // Output
   FP32 output;
   // Prev output (for anti-windup)

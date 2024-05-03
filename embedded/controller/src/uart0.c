@@ -1,7 +1,7 @@
 #include "uart0.h"
 #include "FreeRTOS.h"
 #include "emp_type.h"
-#include "portmacro.h"
+#include "projectdefs.h"
 #include "queue.h"
 #include "task.h"
 #include "tm4c123gh6pm.h"
@@ -9,19 +9,6 @@
 extern xQueueHandle q_uartDebug;
 extern xQueueHandle q_uartAngle;
 extern xQueueHandle q_uartSetpoint;
-
-void send_char(INT8U chr) {
-  while (UART0_FR_R & (1 << 5)){}
-  UART0_DR_R = chr;
-}
-
-void send_string(const char *str) {
-  while (*str) {
-    send_char(*str);
-    str++;
-  }
-}
-
 
 void vUart0Init() {
   // Setup UART0
@@ -62,6 +49,60 @@ void vUart0Init() {
       (UART_CTL_RXE | UART_CTL_TXE | UART_CTL_UARTEN); // Enable UART0
 }
 
+void vSendCharUart(INT8U chr) {
+  while (UART0_FR_R & (1 << 5)){}
+  UART0_DR_R = chr;
+}
+
+void vSendStringUart(const char *str) {
+  while (*str) {
+    vSendCharUart(*str);
+    str++;
+  }
+}
+
+void vSendDebugUart() {
+  if(uxQueueMessagesWaiting(q_uartDebug) == 0) { return; }
+
+  // Send debug data
+  uartDebug_t debug_data;
+  while(xQueueReceive(q_uartDebug, &debug_data, 0)) {
+    vSendStringUart(debug_data.string);
+  }
+}
+
+void send_setpoint(uartAngle_t setpoint){
+  // Only for debugging!
+  // Send setpoint data in text form
+  if(setpoint.axis == PAN){
+    vSendCharUart('P');
+  } else {
+    vSendCharUart('T');
+  }
+  if(setpoint.relative){
+    vSendCharUart('R');
+  } else {
+    vSendCharUart('A');
+  }
+  vSendCharUart(' ');
+  if(setpoint.angle < 0){
+    vSendCharUart('-');
+    setpoint.angle = -setpoint.angle;
+  } else {
+    vSendCharUart('+');
+  }
+  vSendCharUart(setpoint.angle/10000 + '0');
+  setpoint.angle %= 10000;
+  vSendCharUart(setpoint.angle/1000 + '0');
+  setpoint.angle %= 1000;
+  vSendCharUart(setpoint.angle/100 + '0');
+  setpoint.angle %= 100;
+  vSendCharUart(setpoint.angle/10 + '0');
+  setpoint.angle %= 10;
+  vSendCharUart(setpoint.angle + '0');
+  vSendCharUart('\n');
+}
+
 // Format of angle data:
 // ABRSDDDD
 // A: Angle (1 = Pan, 0 = Tilt)
@@ -79,9 +120,10 @@ void vSendAngleData(uartAngle_t angle_data) {
     highByte |= (1 << 7);
   }
 
-  // Set sign bit
+  // Check if negative
   if (angle_data.angle < 0) {
     angle_data.angle = -angle_data.angle;
+    // Set sign bit
     highByte |= (1 << 4);
   }
 
@@ -89,17 +131,16 @@ void vSendAngleData(uartAngle_t angle_data) {
   lowByte  |= angle_data.angle & 0b00011111;
   highByte |= (angle_data.angle >> 5) & 0b00001111;
 
+  // Relative bit is ignored (Always absolute)
+
   // Send data
-  send_char(lowByte);
-  send_char(highByte);
+  vSendCharUart(lowByte);
+  vSendCharUart(highByte);
 }
 
-void vSendAngles(){
+void vSendAnglesUart(){
   // Check if there are any messages in the queue
-  if(uxQueueMessagesWaiting(q_uartAngle) == 0) {
-    // No messages in the queue
-    return;
-  }
+  if(!uxQueueMessagesWaiting(q_uartAngle)) { return; }
 
   uartAngle_t angle_data;
   uartAngle_t pan_angle;
@@ -112,22 +153,58 @@ void vSendAngles(){
       tilt_angle = angle_data;
     }
   }
-  vSendAngleData(pan_angle);
-  vSendAngleData(tilt_angle);
+  send_setpoint(pan_angle);
+  send_setpoint(tilt_angle);
+  // vSendAngleData(pan_angle);
+  // vSendAngleData(tilt_angle);
 }
 
 void vDataToSetpoint(INT8U data, uartAngle_t *setpoint){
+  // *setpoint is already determined to be either pan or tilt
 
-}
-
-void vReceiveSetpoint(){
-  // Return if there is no data
-  if(UART0_FR_R & (1 << 4)){
-    return;
+  // Check if the data is negative
+  BOOLEAN isNegative = setpoint->angle < 0 ? TRUE : FALSE;
+  // Make positive for bit manipulation
+  if (isNegative){
+    setpoint->angle = -setpoint->angle;
   }
 
-  uartAngle_t pan_setpoint;
-  uartAngle_t tilt_setpoint;
+  // High bits
+  if (data & (1 << 6)) {
+    // Remove old high bits
+    setpoint->angle &= 0x1F;
+    // Set new high bits
+    setpoint->angle |= (data & 0x0F) << 5;
+    // Set sign
+    isNegative = data & (1 << 4) ? TRUE : FALSE;
+  } else {
+    // Low bits
+    // Remove old low bits
+    setpoint->angle &= 0xFFE0;
+    // Set new low bits
+    setpoint->angle |= data & 0x1F;
+  }
+
+  if (isNegative){
+    setpoint->angle = -setpoint->angle;
+  }
+
+  if (data & (1 << 5)) {
+    // Set relative
+    setpoint->relative = TRUE;
+  } else {
+    // Set absolute
+    setpoint->relative = FALSE;
+  }
+}
+
+void vReceiveSetpointUart(){
+  // Return if there is no data
+  if(UART0_FR_R & (1 << 4)){ return; }
+
+  // Initialize setpoints
+  uartAngle_t pan_setpoint  = {PAN,  0, FALSE};
+  uartAngle_t tilt_setpoint = {TILT, 0, FALSE};
   INT8U rxData;
   while(!(UART0_FR_R & (1 << 4))) { // Check for FIFO not empty
     rxData = UART0_DR_R;
@@ -137,36 +214,25 @@ void vReceiveSetpoint(){
       vDataToSetpoint(rxData, &tilt_setpoint);
     }
   }
-  xQueueSendToBack(q_uartAngle, &pan_setpoint, 0);
-  xQueueSendToBack(q_uartAngle, &tilt_setpoint, 0);
-  // xQueueSendToBack(q_uartSetpoint, &setpoint_data, 0);
-}
-
-void vSendDebug() {
-  if(uxQueueMessagesWaiting(q_uartDebug) == 0) {
-    return;
-  }
-
-  uartDebug_t debug_data;
-  while(xQueueReceive(q_uartDebug, &debug_data, 0)) {
-    send_string(debug_data.string);
-  }
+  // Only the latest setpoint for pan/tilt is sent to the controller
+  xQueueSendToBack(q_uartSetpoint, &pan_setpoint, 0);
+  xQueueSendToBack(q_uartSetpoint, &tilt_setpoint, 0);
 }
 
 void vUart0Task(void *pvParameters) {
   // Task loop
   while (1) {
     // Send debug
-    vSendDebug();
+    vSendDebugUart();
 
     // Send angle
-    vSendAngles();
+    vSendAnglesUart();
 
     // Receive setpoint
-    vReceiveSetpoint();
+    vReceiveSetpointUart();
 
     // Delay task
-    vTaskDelay(50 / portTICK_RATE_MS); 
+    vTaskDelay(200 / portTICK_RATE_MS); 
   }
 
   // Delete the task if it ever breaks out of the loop above

@@ -27,7 +27,7 @@
 /***************** Constants ******************/
 volatile INT16U panCount = 32768; // (2^16)/2
 volatile INT16U tiltCount = 32768; // (2^16)/2
-volatile INT16U ticks = 0;
+volatile INT32U ticks = 0;
 /***************** Variables ******************/
 /***************** Functions ******************/
 
@@ -61,36 +61,24 @@ void send_count(INT16U count) {
 }
 
 /***************** End of module **************/
-INT16U speed = 5;
 void crement_pwm(INT16U *pwm_val, INT8U *dir) {
-  static INT8U mode = 0;
+  static INT16U count = 0;
   if (*dir == 1) {
     set_port(IN1A, 1);
     set_port(IN2A, 0);
-    if (mode == 0) {
-      (*pwm_val) += speed;
-      if (*pwm_val >= 12000) {
-        mode = 1;
-      }
-    } else if (*pwm_val > 0 && mode == 1) {
-      (*pwm_val) -= speed;
-    } else {
+    if(count > 250){
+      count = 0;
       *dir = 0;
     }
   } else {
     set_port(IN1A, 0);
     set_port(IN2A, 1);
-    if (mode == 1) {
-      (*pwm_val) += speed;
-      if (*pwm_val >= 12000) {
-        mode = 0;
-      }
-    } else if (*pwm_val > 0 && mode == 0) {
-      (*pwm_val) -= speed;
-    } else {
+    if(count > 250){
+      count = 0;
       *dir = 1;
-    }
+    } 
   }
+  count++;
 }
 
 int main(void) {
@@ -98,14 +86,14 @@ int main(void) {
   setup_uart0();
   setup_systick();
   setup_pwm();
-  //
+
   INT16U temp_pan = 0;
   INT16U temp_tilt = 0;
-  INT16U temp_ticks = 0;
-  INT16U temp_last_ticks = -1;
+  INT32U temp_ticks = 0;
+  INT32U temp_last_ticks = -1;
 
   INT8U dir = 1;
-  INT16U pwm_val = 0;
+  INT16U pwm_val = 8000;
   while (1) {
     if (get_port(SW1) == 0) {
       set_led_color(RED);
@@ -122,7 +110,7 @@ int main(void) {
           if(!dir){
             send_char('-');
           }
-          send_count(pwm_val);
+          send_count(pwm_val+1);
           send_char(',');
           send_count(temp_tilt);
           send_char(',');
@@ -132,7 +120,7 @@ int main(void) {
       }
     } else {
       dir = 1;
-      pwm_val = 0;
+      pwm_val = 8000;
       set_port(IN1A, 0);
       set_port(IN2A, 0);
     }
