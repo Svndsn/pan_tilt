@@ -1,8 +1,9 @@
-add_executable(targeting
+add_executable(tracking
 main.cpp
 Controller.cpp
 AngleHandler.cpp
 SensorFusion.cpp
+Vision.cpp
 )
-target_link_libraries(targeting PRIVATE extern)
-target_compile_options(targeting PRIVATE -Wall -Wextra -pedantic -Werror)
+target_link_libraries(tracking PRIVATE extern)
+target_compile_options(tracking PRIVATE -Wall -Wextra -pedantic -Werror)

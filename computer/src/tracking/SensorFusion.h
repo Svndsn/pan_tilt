@@ -1,4 +1,5 @@
 #pragma once
+// Used for the gyro and accelerometer in PS4 controller
 
 typedef struct {
   float roll;
@@ -12,7 +13,7 @@ public:
 
   void getAngles(Axis &accelerometer, Axis &gyroscope, float Ts,
                  Axis *angleOutputs);
-  void ResetAngles();
+  void ReSetAbsoluteAngles();
 
 private:
   float m_alpha;

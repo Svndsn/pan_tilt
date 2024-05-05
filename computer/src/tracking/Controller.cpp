@@ -10,7 +10,7 @@
 
 Controller::Controller()
     : m_sensorFusion(SensorFusion(0.99f, 0.003f, 0.f)),
-      m_tracking(Target::NONE), m_closeRequested(false), m_isConnected(false) {
+      m_tracking(Tracking::NONE), m_closeRequested(false), m_isConnected(false) {
   // Initialize SDL m_gamepad/Controller
   if (SDL_Init(SDL_INIT_GAMEPAD | SDL_INIT_TIMER) != 0) {
     fmt::print("Error initializing SDL\n{}\n", SDL_GetError());
@@ -93,31 +93,31 @@ void Controller::Update() {
       switch (event.gbutton.button) {
       case SDL_GAMEPAD_BUTTON_DPAD_UP:
         fmt::print("Tracking: NONE\n");
-        m_tracking = Target::NONE;
+        m_tracking = Tracking::NONE;
         DisableSensors();
         ResetLED();
         break;
       case SDL_GAMEPAD_BUTTON_DPAD_DOWN:
-        fmt::print("Tracking: MANUAL\n");
-        m_tracking = Target::MANUAL;
+        fmt::print("Tracking: JOYSTICK\n");
+        m_tracking = Tracking::JOYSTICK;
         DisableSensors();
         ResetLED();
         break;
       case SDL_GAMEPAD_BUTTON_DPAD_RIGHT:
         fmt::print("Tracking: MOVEMENT\n");
-        m_tracking = Target::MOVEMENT;
+        m_tracking = Tracking::MOVEMENT;
         EnableSensors();
         ResetLED();
         break;
       case SDL_GAMEPAD_BUTTON_DPAD_LEFT:
         fmt::print("Tracking: VISION\n");
-        m_tracking = Target::VISION;
+        m_tracking = Tracking::VISION;
         DisableSensors();
         ResetLED();
         break;
       case SDL_GAMEPAD_BUTTON_TOUCHPAD:
         fmt::print("Tracking: TOUCH\n");
-        m_tracking = Target::TOUCH;
+        m_tracking = Tracking::TOUCH;
         DisableSensors();
         ResetLED();
         break;
@@ -125,14 +125,19 @@ void Controller::Update() {
         fmt::print("Close requested\n");
         m_closeRequested = true;
         break;
+      case SDL_GAMEPAD_BUTTON_SOUTH:
+        // Confirm button
+        break;
       case SDL_GAMEPAD_BUTTON_WEST:
         fmt::print("Home\n");
         m_axisRightX = 0;
         m_tiltAngle = 0;
         break;
       case SDL_GAMEPAD_BUTTON_EAST:
-        fmt::print("Reset sensor reference\n");
-        m_sensorFusion.ResetAngles();
+        if (m_tracking == Tracking::MOVEMENT) {
+          fmt::print("Reset sensor reference\n");
+          m_sensorFusion.ReSetAbsoluteAngles();
+        }
         break;
       default:
         break;
@@ -140,7 +145,7 @@ void Controller::Update() {
       break;
 
     case SDL_EVENT_GAMEPAD_TOUCHPAD_MOTION:
-      if (m_tracking == Target::TOUCH) {
+      if (m_tracking == Tracking::TOUCH) {
         m_axisTouchX = (event.gtouchpad.x - 0.5) * 2;
         m_axisTouchY = (event.gtouchpad.y - 0.5) * 2;
       }
@@ -195,7 +200,7 @@ void Controller::Update() {
   }
 
   // Handle axis inputs
-  if (m_tracking == Target::MANUAL || m_tracking == Target::VISION) {
+  if (m_tracking == Tracking::JOYSTICK || m_tracking == Tracking::VISION) {
     std::tie(m_axisLeftX, m_axisLeftY) = NomalizeAxis(leftX, leftY);
     std::tie(m_axisRightX, m_axisRightY) = NomalizeAxis(rightX, rightY);
   }
@@ -203,7 +208,15 @@ void Controller::Update() {
 
 bool Controller::CloseRequested() const { return m_closeRequested; }
 
-Target Controller::GetTracking() const { return m_tracking; }
+bool Controller::IsConfirmPressed() const{
+  bool confirmPressed = false;
+  if (m_isConnected) {
+    confirmPressed = SDL_GetGamepadButton(m_gamepad, SDL_GAMEPAD_BUTTON_SOUTH);
+  }
+  return confirmPressed;
+}
+
+Tracking Controller::GetTracking() const { return m_tracking; }
 
 std::pair<float, float> Controller::NomalizeAxis(int16_t &x, int16_t &y) const {
   float fx = x;
@@ -224,25 +237,25 @@ std::pair<float, float> Controller::NomalizeAxis(int16_t &x, int16_t &y) const {
     fy = fy > CONTROLLER_AXIS_THRESHOLD ? fy : 0;
   }
 
-  return std::make_pair(fx * 90, fy * 90);
+  return std::make_pair(fx, fy);
 }
 
 void Controller::ResetLED() const {
   switch (m_tracking) {
-  case Target::NONE:
+  case Tracking::NONE:
     SetLED(0, 0, 0);
     SetRumble(0xffff, 0, 1000);
     break;
-  case Target::MANUAL:
+  case Tracking::JOYSTICK:
     SetLED(0, 255, 0);
     break;
-  case Target::MOVEMENT:
+  case Tracking::MOVEMENT:
     SetLED(0, 0, 255);
     break;
-  case Target::VISION:
+  case Tracking::VISION:
     SetLED(255, 255, 255);
     break;
-  case Target::TOUCH:
+  case Tracking::TOUCH:
     SetLED(255, 255, 0);
   }
 }

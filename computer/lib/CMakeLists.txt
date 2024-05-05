@@ -47,7 +47,6 @@ add_library(extern INTERFACE)
 target_link_libraries(extern INTERFACE
 SDL3::SDL3
 fmt::fmt
-${OpenCV_LIB_DIR}
 ${OpenCV_LIBS}
 seriallib
 )

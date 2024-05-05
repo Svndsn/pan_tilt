@@ -3,7 +3,7 @@
 #include "SensorFusion.h"
 #include <utility>
 
-enum class Target { NONE, MANUAL, MOVEMENT, TOUCH, VISION };
+enum class Tracking { NONE, JOYSTICK, MOVEMENT, TOUCH, VISION };
 
 class Controller {
 public:
@@ -36,7 +36,10 @@ public:
   bool CloseRequested() const;
 
   // Get tracking of systen
-  Target GetTracking() const;
+  Tracking GetTracking() const;
+  
+  // Is comfirm button pressed
+  bool IsConfirmPressed() const;
 
   // Toggle tracking of systen
   void SetLED(int red, int green, int blue) const;
@@ -49,17 +52,19 @@ public:
 
 private:
   std::pair<float, float> NomalizeAxis(int16_t &x, int16_t &y) const;
+
+  // Used to disable sensors when not in use
   void DisableSensors() const;
   void EnableSensors() const;
 
   SDL_Gamepad *m_gamepad;
   SensorFusion m_sensorFusion;
-  Target m_tracking;
+  Tracking m_tracking;
 
   float m_panAngle, m_tiltAngle = 0.0f;
   float m_axisRightX, m_axisRightY = 0.0f;
   float m_axisLeftX, m_axisLeftY = 0.0f;
   float m_axisTouchX, m_axisTouchY = 0.0f;
-  bool m_closeRequested;
+  bool m_closeRequested; // Triangle 
   bool m_isConnected;
 };
