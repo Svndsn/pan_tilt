@@ -11,7 +11,7 @@
 #include "Controller.h"
 #include "Vision.h"
 
-#define FPS 60
+#define FPS 30
 #define FRAME_TIME 1000 / FPS
 
 int main() {
@@ -24,21 +24,15 @@ int main() {
   // Initialize the vision tracking and video capture
   Vision vision("Tracking", 1);
 
-  bool isRunning = true;
+  // For timings
   auto startMS = SDL_GetTicks();
   auto lastConfirmed = SDL_GetTicks();
+
   // Main loop
-  while (isRunning) {
+  while (!controller.CloseRequested()) {
 
     // Update controller inputs
     controller.Update();
-
-    // Check if the user has requested to close the application
-    if (controller.CloseRequested()) {
-      isRunning = false;
-      break;
-    }
-
 
     // Handle the timing of the loop
     auto endMS = SDL_GetTicks();
@@ -57,25 +51,21 @@ int main() {
     // Handle tracking
     switch (controller.GetTracking()) {
     case Tracking::NONE:
+        angleHandler.SetAbsoluteAngles(0, 0);
       break;
     case Tracking::JOYSTICK: {
-      fmt::print("Joystick Right Tracking X: {:6.3} Y: {:6.3}\n",
-                 controller.GetRightAxis().first,
-                 controller.GetRightAxis().second);
-      fmt::print("Joystick Left Tracking X: {:6.3} Y: {:6.3}\n",
-                 controller.GetLeftAxis().first,
-                 controller.GetLeftAxis().second);
-
+        const auto [pan, tilt] = controller.GetLeftAxis();
+        angleHandler.SetRelativeAngles(pan * 5, tilt * 5);
       break;
     }
     case Tracking::MOVEMENT: {
-      const auto [yaw, pitch] = controller.GetAngles();
-      fmt::print("Movement Tracking X: {:6.3} Y: {:6.3}\n", yaw, pitch);
+      const auto [pan, tilt] = controller.GetAngles();
+      angleHandler.SetAbsoluteAngles(pan, tilt);
       break;
     }
     case Tracking::TOUCH: {
-      const auto [yaw, pitch] = controller.GetTouchAxis();
-      fmt::print("Touch Tracking X: {:6.3} Y: {:6.3}\n", yaw, pitch);
+      const auto [pan, tilt] = controller.GetTouchAxis();
+      angleHandler.SetRelativeAngles(pan * 5, tilt * 5);
       break;
     }
     case Tracking::VISION: {
@@ -84,8 +74,9 @@ int main() {
         const auto [posX, posY] = controller.GetRightAxis();
         const auto [width, height] = controller.GetLeftAxis();
 
-        vision.UpdateTrackingBox(posX * 5, posY * 5, width * 5, height * 5);
+        vision.UpdateTrackingBox(posX * 8, posY * 8, width * 5, height * 5);
 
+        // Press the confirm button (X) to start tracking
         if (controller.IsConfirmPressed()) {
           // Only confirm if the last confirmation was minimum 500ms ago
           if (lastConfirmed + 500 < SDL_GetTicks()) {
@@ -101,6 +92,7 @@ int main() {
         const auto [pan2Center, tilt2Center] = vision.GetAngles();
         angleHandler.SetRelativeAngles(pan2Center, tilt2Center);
 
+        // Press the confirm button (X) to stop tracking
         if (controller.IsConfirmPressed()) {
           if (lastConfirmed + 500 < SDL_GetTicks()) {
             lastConfirmed = SDL_GetTicks();

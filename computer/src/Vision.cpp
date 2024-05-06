@@ -21,11 +21,8 @@ Vision::Vision(std::string windowName, int cameraIndex) {
   // Create a window to display the captured video
   cv::namedWindow(windowName, cv::WINDOW_NORMAL);
 
-  // Create a tracker object
-  m_tracker = cv::TrackerKCF::create();
-
   // Set the tracking box
-  SetTrackingBox(400, 400, 100, 100);
+  SetTrackingBox(400, 200, 100, 100);
 
   // Set the tracking state
   m_trackingActive = false;
@@ -97,6 +94,7 @@ void Vision::UpdateTracker() {
     m_trackingActive = false;
     errorCount = 0;
   } else {
+    fmt::print("Vision Tracking: Error\n");
     errorCount++;
   }
 }

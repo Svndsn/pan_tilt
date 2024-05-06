@@ -1,6 +1,8 @@
 #include "AngleHandler.h"
 #include "serialib.h"
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <fmt/core.h>
 #include <string>
@@ -34,10 +36,6 @@ AngleHandler::~AngleHandler() {
   }
 }
 
-void AngleHandler::ReceiveAngles() {
-  ReceiveAnglesUART();
-}
-
 std::pair<int16_t, int16_t> AngleHandler::GetAngles() const {
   int16_t panAngle = m_panAngle;
   int16_t tiltAngle = m_tiltAngle;
@@ -46,6 +44,10 @@ std::pair<int16_t, int16_t> AngleHandler::GetAngles() const {
 
 std::pair<int16_t, int16_t> AngleHandler::GetSetpoints() const {
   return std::make_pair(m_panSetpointAngle, m_tiltSetpointAngle);
+}
+
+void AngleHandler::ReceiveAngles() {
+  ReceiveAnglesUART();
 }
 
 void AngleHandler::SetAbsoluteAngles(int16_t absPanAngle, int16_t absTiltAngle) {
@@ -61,8 +63,8 @@ void AngleHandler::SetAbsoluteAngles(int16_t absPanAngle, int16_t absTiltAngle) 
   else if (m_tiltSetpointAngle > TILT_ANGLE_MAX) m_tiltSetpointAngle = TILT_ANGLE_MAX;
 
   // Send the absolute setpoint angles to the microcontroller
-  // SendSetpointUART(Angle::Pan, absPanAngle, false);
-  // SendSetpointUART(Angle::Tilt, absTiltAngle, false);
+  SendSetpointUART(Angle::Pan, absPanAngle, false);
+  SendSetpointUART(Angle::Tilt, absTiltAngle, false);
 }
 
 void AngleHandler::SetRelativeAngles(int16_t relPanAngle, int16_t relTiltAngle) {
@@ -78,8 +80,8 @@ void AngleHandler::SetRelativeAngles(int16_t relPanAngle, int16_t relTiltAngle) 
   else if (m_tiltSetpointAngle > TILT_ANGLE_MAX) m_tiltSetpointAngle = TILT_ANGLE_MAX;
 
   // Send the relative setpoint angles to the microcontroller
-  // SendSetpointUART(Angle::Pan, relPanAngle, true);
-  // SendSetpointUART(Angle::Tilt, relTiltAngle, true);
+  SendSetpointUART(Angle::Pan, relPanAngle, true);
+  SendSetpointUART(Angle::Tilt, relTiltAngle, true);
 }
 
 std::string AngleHandler::FindSerialDevice() const {
@@ -108,8 +110,7 @@ std::string AngleHandler::FindSerialDevice() const {
   return device;
 }
 
-void AngleHandler::SendSetpointUART(Angle type, int16_t setpoint, bool relative) const {
-  // TODO: Implement the new format
+void AngleHandler::SendSetpointUART(Angle axis, int16_t setpoint, bool relative) const {
   // Format:
   // ABRSDDDD
   // A: Angle (1 = Pan, 0 = Tilt)
@@ -117,31 +118,31 @@ void AngleHandler::SendSetpointUART(Angle type, int16_t setpoint, bool relative)
   // R: Relative (Relative: R=1, Absolute: R=0)
   // S: Sign  (Data: B=0, Sign: B=1)
   // D: Data  (Always)
-  (void)relative;
-  (void)setpoint;
-  uint8_t lowByte = 0b00000000;
-  uint8_t highByte = 0b01000000;
-  int16_t angle;
+  uint8_t lowByte  = 0;
+  uint8_t highByte = (1 << 6);
 
   // Set type bit (Pan = 1, Tilt = 0)
-  if (type == Angle::Pan) {
-    angle = m_panAngle;
-    lowByte |= 0b10000000;
-    highByte |= 0b10000000;
-  } else {
-    angle = m_tiltAngle;
+  if (axis == Angle::Pan) {
+    lowByte  |= (1 << 7);
+    highByte |= (1 << 7);
+  }
+
+  // Set relative bits
+  if (relative) {
+    lowByte  |= (1 << 5);
+    highByte |= (1 << 5);
   }
 
   // Set sign bit
-  if (angle < 0) {
-    // Hangle 1's complement
-    angle = -angle;
-    highByte |= 0b00010000;
+  if (setpoint < 0) {
+    setpoint = -setpoint;
+    // Set sign bit
+    highByte |= (1 << 4);
   }
 
   // Set data bits
-  lowByte |= angle & 0b00111111;
-  highByte |= (angle >> 6) & 0b00001111;
+  lowByte  |= setpoint & 0b00011111;
+  highByte |= (setpoint >> 5) & 0b00001111;
 
   // Send data (Order is not important)
   m_serialConnection.writeChar(lowByte);
@@ -149,13 +150,15 @@ void AngleHandler::SendSetpointUART(Angle type, int16_t setpoint, bool relative)
 }
 
 void AngleHandler::ReceiveAnglesUART() {
-  // TODO: Implement the new format
   // Read the lastest data from the serial port
   uint8_t receivedBytes[MAX_DATA_LENGTH];
   int nBytes =
       m_serialConnection.readBytes(receivedBytes, MAX_DATA_LENGTH, 100);
   if (nBytes < 0) {
     fmt::print("Error while reading bytes. Error code: {}\n", nBytes);
+    return;
+  } else if (nBytes == 0) {
+    // No data received
     return;
   }
   for (int i = 0; i < nBytes; i++) {
@@ -166,24 +169,35 @@ void AngleHandler::ReceiveAnglesUART() {
     } else {
       angle = &m_tiltAngle;
     }
+
+    bool isNegative = *angle < 0;
+    if (isNegative) {
+      *angle = -(*angle);
+    }
+
     if (data & (1 << 6)) {   // High bits
-      if (data & (1 << 5)) { // Request data
-        // Ignore data request (Should not happen)
-      } else { // No request (Data and sign)
-        if (*angle < 0) {
-          *angle = -*angle;
-        }
-        *angle = ((data & 0x0F) << 6) | (*angle & 0x3F);
-        if (data & (1 << 4)) { // Negative
-          *angle = -(*angle);
-        }
-      }
+      // Remove old high bits data
+      *angle &= 0x1F;
+      // Set new high bits data
+      *angle |= (data & 0x0F) << 5;
+      // Set the sign bit
+      isNegative = data & (1 << 4);
     } else { // Low bits
-      if (*angle < 0) {
-        *angle = -((data & 0x3F) | ((-*angle) & 0xFFC0));
-      } else {
-        *angle = (data & 0x3F) | (*angle & 0xFFC0);
-      }
+      // Remove old low bits data
+      *angle &= 0xFFE0;
+      // Set new low bits data
+      *angle |= data & 0x1F;
+    }
+
+    // Restore the sign
+    if (isNegative) {
+      *angle = -(*angle);
+    }
+
+    // Only absolute angles are received
+    if (data & (1 << 5)) {
+      fmt::print("Received relative angle. Only absolute angles are supported.\n");
     }
   }
+  fmt::print("Pan: {:<4} Tilt: {:<4}\n", m_panAngle, m_tiltAngle);
 }
