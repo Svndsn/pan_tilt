@@ -40,6 +40,7 @@ int main() {
       startMS = endMS;
     } else {
       continue;
+
     }
 
     // This section of code will run at FPS
@@ -47,25 +48,29 @@ int main() {
 
     // Get the current frame from the camera
     vision.UpdateCamera();
+    angleHandler.ReceiveAngles();
 
     // Handle tracking
     switch (controller.GetTracking()) {
     case Tracking::NONE:
-        angleHandler.SetAbsoluteAngles(0, 0);
+        vision.PutText("No Tracking", 10, 20, 0.5, cv::Scalar(0, 0, 255), 1);
       break;
     case Tracking::JOYSTICK: {
         const auto [pan, tilt] = controller.GetLeftAxis();
-        angleHandler.SetRelativeAngles(pan * 5, tilt * 5);
+        angleHandler.SetRelativeAngles(pan * 2, tilt * 2);
+        vision.PutText("Joystick Tracking", 10, 20, 0.5, cv::Scalar(0, 255, 0), 1);
       break;
     }
     case Tracking::MOVEMENT: {
       const auto [pan, tilt] = controller.GetAngles();
       angleHandler.SetAbsoluteAngles(pan, tilt);
+      vision.PutText("Movement Tracking", 10, 20, 0.5, cv::Scalar(0, 255, 0), 1);
       break;
     }
     case Tracking::TOUCH: {
       const auto [pan, tilt] = controller.GetTouchAxis();
       angleHandler.SetRelativeAngles(pan * 5, tilt * 5);
+      vision.PutText("Touch Tracking", 10, 20, 0.5, cv::Scalar(0, 255, 0), 1);
       break;
     }
     case Tracking::VISION: {
@@ -103,7 +108,7 @@ int main() {
       if (vision.IsTrackingActive()) {
         vision.PutText("Tracking", 10, 20, 0.5, cv::Scalar(0, 255, 0), 1);
       } else {
-        vision.PutText("Not Tracking", 10, 20, 0.5, cv::Scalar(0, 0, 255), 1);
+        vision.PutText("Set Tracking Box", 10, 20, 0.5, cv::Scalar(0, 0, 255), 1);
       }
       break;
     }

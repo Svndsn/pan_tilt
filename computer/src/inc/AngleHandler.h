@@ -34,6 +34,7 @@ private:
 
   void SendSetpointUART(Angle type, int16_t setpoint, bool relative) const;
   void ReceiveAnglesUART();
+  void DataToAngle(uint8_t data);
 
   mutable serialib m_serialConnection;
   int16_t m_panSetpointAngle, m_tiltSetpointAngle;

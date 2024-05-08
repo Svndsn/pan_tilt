@@ -1,14 +1,20 @@
-#include "uart0.h"
 #include "FreeRTOS.h"
-#include "emp_type.h"
-#include "projectdefs.h"
 #include "queue.h"
 #include "task.h"
-#include "tm4c123gh6pm.h"
+#include "semphr.h"
 
+#include "tm4c123gh6pm.h"
+#include "uart0.h"
+#include "emp_type.h"
+#include "projectdefs.h"
+
+// UART0 queues
 extern xQueueHandle q_uartDebug;
-extern xQueueHandle q_uartAngle;
-extern xQueueHandle q_uartSetpoint;
+extern xQueueHandle q_uartAngle; // Send current angle
+extern xQueueHandle q_uartSetpoint; // Receive setpoint
+// UART0 Mutex
+extern xSemaphoreHandle uart0RxMutex;
+extern xSemaphoreHandle uart0TxMutex;
 
 void vUart0Init() {
   // Setup UART0
@@ -71,50 +77,19 @@ void vSendDebugUart() {
   }
 }
 
-void send_setpoint(uartAngle_t setpoint){
-  // Only for debugging!
-  // Send setpoint data in text form
-  if(setpoint.axis == PAN){
-    vSendCharUart('P');
-  } else {
-    vSendCharUart('T');
-  }
-  if(setpoint.relative){
-    vSendCharUart('R');
-  } else {
-    vSendCharUart('A');
-  }
-  vSendCharUart(' ');
-  if(setpoint.angle < 0){
-    vSendCharUart('-');
-    setpoint.angle = -setpoint.angle;
-  } else {
-    vSendCharUart('+');
-  }
-  vSendCharUart(setpoint.angle/10000 + '0');
-  setpoint.angle %= 10000;
-  vSendCharUart(setpoint.angle/1000 + '0');
-  setpoint.angle %= 1000;
-  vSendCharUart(setpoint.angle/100 + '0');
-  setpoint.angle %= 100;
-  vSendCharUart(setpoint.angle/10 + '0');
-  setpoint.angle %= 10;
-  vSendCharUart(setpoint.angle + '0');
-  vSendCharUart('\n');
-}
-
 // Format of angle data:
-// ABRSDDDD
-// A: Angle (1 = Pan, 0 = Tilt)
+// MBRS DDDD
+// A: Axis (1 = Pan, 0 = Tilt)
 // B: Bits  (1 = High bits, 0 = Low bits)
 // R: Relative (1 = Relative, 0 = Absolute)
 // S: Sign  (Data if B=0, Sign if B=1)
 // D: Data  (Always)
+
 void vSendAngleData(uartAngle_t angle_data) {
   INT8U lowByte  = 0;
   INT8U highByte = (1 << 6);
 
-  // Set angle bit
+  // Set axis bit
   if (angle_data.axis == PAN) {
     lowByte  |= (1 << 7);
     highByte |= (1 << 7);
@@ -142,21 +117,17 @@ void vSendAnglesUart(){
   // Check if there are any messages in the queue
   if(!uxQueueMessagesWaiting(q_uartAngle)) { return; }
 
-  uartAngle_t angle_data;
-  uartAngle_t pan_angle;
-  uartAngle_t tilt_angle;
-  // Empty the queue to get the latest angles
-  while(xQueueReceive(q_uartAngle, &angle_data, 0)) {
-    if(angle_data.axis == PAN){
-      pan_angle = angle_data;
-    } else {
-      tilt_angle = angle_data;
+  if (xSemaphoreTake(uart0TxMutex, 1)) {
+    // Send angle data (pan and tilt
+    uartAngle_t angle_data;
+    // Empty the queue to get the latest angles
+    while (xQueueReceive(q_uartAngle, &angle_data, 0)) {
+      vSendAngleData(angle_data);
     }
+
+    // Release the mutex
+    xSemaphoreGive(uart0TxMutex);
   }
-  send_setpoint(pan_angle);
-  send_setpoint(tilt_angle);
-  // vSendAngleData(pan_angle);
-  // vSendAngleData(tilt_angle);
 }
 
 void vDataToSetpoint(INT8U data, uartAngle_t *setpoint){
@@ -198,25 +169,30 @@ void vDataToSetpoint(INT8U data, uartAngle_t *setpoint){
   }
 }
 
-void vReceiveSetpointUart(){
+void vReceiveSetpointsUart(){
   // Return if there is no data
   if(UART0_FR_R & (1 << 4)){ return; }
 
-  // Initialize setpoints
-  uartAngle_t pan_setpoint  = {PAN,  0, FALSE};
-  uartAngle_t tilt_setpoint = {TILT, 0, FALSE};
-  INT8U rxData;
-  while(!(UART0_FR_R & (1 << 4))) { // Check for FIFO not empty
-    rxData = UART0_DR_R;
-    if(rxData & (1 << 7)){
-      vDataToSetpoint(rxData, &pan_setpoint);
-    }else{
-      vDataToSetpoint(rxData, &tilt_setpoint);
+  if (xSemaphoreTake(uart0RxMutex, 1)) {
+    // Initialize setpoints
+    static uartAngle_t pan_setpoint = {PAN, 0, FALSE};
+    static uartAngle_t tilt_setpoint = {TILT, 0, FALSE};
+    INT8U rxData;
+    while (!(UART0_FR_R & (1 << 4))) { // Receive 4 bytes
+        rxData = UART0_DR_R;
+        if (rxData & (1 << 7)) {
+          vDataToSetpoint(rxData, &pan_setpoint);
+        } else {
+          vDataToSetpoint(rxData, &tilt_setpoint);
+        }
     }
+
+    xQueueSendToBack(q_uartSetpoint, &pan_setpoint, 0);
+    xQueueSendToBack(q_uartSetpoint, &tilt_setpoint, 0);
+
+    // Release the mutex
+    xSemaphoreGive(uart0RxMutex);
   }
-  // Only the latest setpoint for pan/tilt is sent to the controller
-  xQueueSendToBack(q_uartSetpoint, &pan_setpoint, 0);
-  xQueueSendToBack(q_uartSetpoint, &tilt_setpoint, 0);
 }
 
 void vUart0Task(void *pvParameters) {
@@ -229,10 +205,10 @@ void vUart0Task(void *pvParameters) {
     vSendAnglesUart();
 
     // Receive setpoint
-    vReceiveSetpointUart();
+    vReceiveSetpointsUart();
 
     // Delay task
-    vTaskDelay(200 / portTICK_RATE_MS); 
+    vTaskDelay(50 / portTICK_RATE_MS); 
   }
 
   // Delete the task if it ever breaks out of the loop above

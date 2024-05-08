@@ -2,6 +2,7 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "task.h"
+#include "semphr.h"
 
 // Project
 #include "tm4c123gh6pm.h"
@@ -15,10 +16,16 @@
 xQueueHandle q_uartDebug;
 xQueueHandle q_uartAngle; // Send current angle
 xQueueHandle q_uartSetpoint; // Receive setpoint
+// UART0 Mutex
+xSemaphoreHandle uart0RxMutex;
+xSemaphoreHandle uart0TxMutex;
 
 // SPI1 queues
 xQueueHandle q_spiDutyCycle; // Send duty cycle
 xQueueHandle q_spiAngle; // Receive angle
+// SPI1 Mutex
+xSemaphoreHandle spi1RxMutex;
+xSemaphoreHandle spi1TxMutex;
 
 void setup_hardware() {
   // Enable clocks
@@ -42,6 +49,12 @@ int main() {
   q_uartSetpoint = xQueueCreate(20, sizeof(uartAngle_t));
   q_spiDutyCycle = xQueueCreate(20, sizeof(spiDutyCycle_t));
   q_spiAngle     = xQueueCreate(20, sizeof(spiAngle_t));
+
+  // Create the mutexes
+  uart0RxMutex = xSemaphoreCreateMutex();
+  uart0TxMutex = xSemaphoreCreateMutex();
+  spi1RxMutex  = xSemaphoreCreateMutex();
+  spi1TxMutex  = xSemaphoreCreateMutex();
 
   // Create the tasks
   xTaskCreate(vStatusLedTask,  "Status LED",     USERTASK_STACK_SIZE, NULL, LOW, NULL);

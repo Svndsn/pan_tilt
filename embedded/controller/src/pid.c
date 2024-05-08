@@ -1,19 +1,28 @@
-#include "pid.h"
 #include "FreeRTOS.h"
-#include "projectdefs.h"
-#include "queue.h"
-#include "spi1.h"
 #include "task.h"
+#include "queue.h"
+#include "semphr.h"
+
+#include "pid.h"
+#include "projectdefs.h"
+#include "spi1.h"
 #include "uart0.h"
 
-// UART queues
+// UART0 queues
 extern xQueueHandle q_uartDebug;
-extern xQueueHandle q_uartAngle;
-extern xQueueHandle q_uartSetpoint;
+extern xQueueHandle q_uartAngle; // Send current angle
+extern xQueueHandle q_uartSetpoint; // Receive setpoint
+// UART0 Mutex
+extern xSemaphoreHandle uart0RxMutex;
+extern xSemaphoreHandle uart0TxMutex;
 
 // SPI1 queues
-extern xQueueHandle q_spiDutyCycle;
-extern xQueueHandle q_spiAngle;
+extern xQueueHandle q_spiDutyCycle; // Send duty cycle
+extern xQueueHandle q_spiAngle; // Receive angle
+// SPI1 Mutex
+extern xSemaphoreHandle spi1RxMutex;
+extern xSemaphoreHandle spi1TxMutex;
+
 
 PID_t pidPan;
 PID_t pidTilt;
@@ -21,8 +30,8 @@ PID_t pidTilt;
 void vControllerInit() {
   // Pan PID
   pidPan.Kp = 0.1f;
-  pidPan.Ki = 0.f;
   pidPan.Kd = 0.f;
+  pidPan.Ki = 0.f;
 
   pidPan.T = 0.01f; // 100Hz
 
@@ -39,8 +48,8 @@ void vControllerInit() {
 
   // Tilt PID
   pidTilt.Kp = 0.1f;
-  pidTilt.Ki = 0.f;
   pidTilt.Kd = 0.f;
+  pidTilt.Ki = 0.f;
 
   pidTilt.T = 0.01f; // 100Hz
 
@@ -91,57 +100,79 @@ void vUpdateController(PID_t *pid) {
     pid->output = pid->minLimit;
   }
   // TODO: Maybe add acceleration limits
-  // To avoid the belt slipping/breaking
+  // To avoid the belt slipping/breaking due to sudden changes in direction
 }
 
 void vUpdateSetpoints() {
   if (!uxQueueMessagesWaiting(q_uartSetpoint)) { return; }
 
-  uartAngle_t setpoint;
-  while (xQueueReceive(q_uartSetpoint, &setpoint, 0)) {
-    // Setpoint received
-    if (setpoint.axis == PAN) {
-      if (setpoint.relative) {
-        pidPan.setpoint += setpoint.angle;
+  if (xSemaphoreTake(uart0RxMutex, 1)) {
+    uartAngle_t setpoint;
+    while (xQueueReceive(q_uartSetpoint, &setpoint, 0)) {
+      // Setpoint received
+      if (setpoint.axis == PAN) {
+        if (setpoint.relative) {
+          pidPan.setpoint += setpoint.angle;
+        } else {
+          pidPan.setpoint = setpoint.angle;
+        }
       } else {
-        pidPan.setpoint = setpoint.angle;
-      }
-    } else {
-      if (setpoint.relative) {
-        pidTilt.setpoint += setpoint.angle;
-      } else {
-        pidTilt.setpoint = setpoint.angle;
+        if (setpoint.relative) {
+          pidTilt.setpoint += setpoint.angle;
+        } else {
+          pidTilt.setpoint = setpoint.angle;
+        }
       }
     }
+    // TODO: Add limits to setpoints
+    xSemaphoreGive(uart0RxMutex);
   }
-  // TODO: Add limits to setpoints
 }
 
 void vReceiveAngles() {
   if(!uxQueueMessagesWaiting(q_spiAngle)) { return; }
 
-  spiAngle_t angle;
-  while (xQueueReceive(q_spiAngle, &angle, 0)) {
-    if (angle.axis == PAN) {
-      pidPan.measurement = angle.angle;
-    } else {
-      pidTilt.measurement = angle.angle;
+  if (xSemaphoreTake(spi1RxMutex, 1)) {
+    spiAngle_t angle;
+    while (xQueueReceive(q_spiAngle, &angle, 0)) {
+      if (angle.axis == PAN) {
+        pidPan.measurement = angle.angle;
+      } else {
+        pidTilt.measurement = angle.angle;
+      }
     }
+
+    // Release the mutex
+    xSemaphoreGive(spi1RxMutex);
   }
 }
 
 void vSendAngles() {
-  uartAngle_t panAngle = {PAN, pidPan.measurement, FALSE};
-  uartAngle_t tiltAngle = {TILT, pidTilt.measurement, FALSE};
-  xQueueSendToBack(q_uartAngle, &panAngle, 0);
-  xQueueSendToBack(q_uartAngle, &tiltAngle, 0);
+  // Get the mutex
+  if (xSemaphoreTake(uart0TxMutex, 1)) {
+    uartAngle_t panAngle = {PAN, pidPan.setpoint, FALSE};
+    uartAngle_t tiltAngle = {TILT, pidTilt.setpoint, FALSE};
+    // uartAngle_t panAngle = {PAN, pidPan.measurement, FALSE};
+    // uartAngle_t tiltAngle = {TILT, pidTilt.measurement, FALSE};
+    xQueueSendToBack(q_uartAngle, &panAngle, 0);
+    xQueueSendToBack(q_uartAngle, &tiltAngle, 0);
+
+    // Release the mutex
+    xSemaphoreGive(uart0TxMutex);
+  }
 }
 
 void vSendDutyCycles() {
-  spiDutyCycle_t panDutyCycle = {PAN, pidPan.output};
-  spiDutyCycle_t tiltDutyCycle = {TILT, pidTilt.output};
-  xQueueSendToBack(q_spiDutyCycle, &panDutyCycle, 0);
-  xQueueSendToBack(q_spiDutyCycle, &tiltDutyCycle, 0);
+  if(xSemaphoreTake(spi1TxMutex, 1)) {
+    // Send the duty cycles (output from the PID controller
+    spiDutyCycle_t panDutyCycle = {PAN, pidPan.output};
+    spiDutyCycle_t tiltDutyCycle = {TILT, pidTilt.output};
+    xQueueSendToBack(q_spiDutyCycle, &panDutyCycle, 0);
+    xQueueSendToBack(q_spiDutyCycle, &tiltDutyCycle, 0);
+
+    // Release the mutex
+    xSemaphoreGive(spi1TxMutex);
+  }
 }
 
 void vControllerTask() {
@@ -157,7 +188,7 @@ void vControllerTask() {
     vUpdateSetpoints();
 
     // Get the latest measurement (take all values from q_spiAngle)
-    vReceiveAngles();
+    // vReceiveAngles();
 
     // Send the latest measurements to the computer (q_uartAngle)
     vSendAngles();
@@ -167,7 +198,7 @@ void vControllerTask() {
     vUpdateController(&pidTilt);
 
     // Send the latest output to the motor (q_spiDutyCycle)
-    vSendDutyCycles();
+    // vSendDutyCycles();
 
     // Make sure the task runs at 100Hz
     vTaskDelayUntil(&xLastWakeTime, CONTROLLER_PERIOD_MS / portTICK_RATE_MS);

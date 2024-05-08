@@ -12,18 +12,23 @@
 #define PAN_ANGLE_MAX 80
 #define TILT_ANGLE_MIN -90
 #define TILT_ANGLE_MAX 90
-#define MAX_DATA_LENGTH 16
+#define MAX_DATA_LENGTH 64
+
+// Uart Protocol
+// Format:
+// Header: 2 bytes (Type, Data length)
+// Data: 0-255 bytes
 
 AngleHandler::AngleHandler() {
   // Connection to serial port
   int err = m_serialConnection.openDevice(FindSerialDevice().c_str(), 
                                           115200,
                                           SERIAL_DATABITS_8, 
-                                          SERIAL_PARITY_NONE,
+                                          SERIAL_PARITY_EVEN,
                                           SERIAL_STOPBITS_1);
-
   if (err < 1) fmt::print("Serial error: Error code: {}\n", err);
 
+  m_serialConnection.flushReceiver();
   m_panAngle = 0;
   m_tiltAngle = 0;
   m_panSetpointAngle = 0;
@@ -37,9 +42,7 @@ AngleHandler::~AngleHandler() {
 }
 
 std::pair<int16_t, int16_t> AngleHandler::GetAngles() const {
-  int16_t panAngle = m_panAngle;
-  int16_t tiltAngle = m_tiltAngle;
-  return std::make_pair(panAngle, tiltAngle);
+  return std::make_pair(m_panAngle, m_tiltAngle);
 }
 
 std::pair<int16_t, int16_t> AngleHandler::GetSetpoints() const {
@@ -99,6 +102,7 @@ std::string AngleHandler::FindSerialDevice() const {
     for (size_t i = 0; i < devices.size(); i++) {
       fmt::print("Device {}: {}\n", i, devices[i]);
     }
+    fmt::print("Select the device index: ");
     size_t deviceIndex;
     std::cin >> deviceIndex;
     assert(!std::cin.fail() && deviceIndex < devices.size() &&
@@ -149,11 +153,49 @@ void AngleHandler::SendSetpointUART(Angle axis, int16_t setpoint, bool relative)
   m_serialConnection.writeChar(highByte);
 }
 
+void AngleHandler::DataToAngle(uint8_t data){
+  int16_t *angle;
+  if (data & (1 << 7)) {
+    angle = &m_panAngle;
+  } else {
+    angle = &m_tiltAngle;
+  }
+
+  bool isNegative = *angle < 0;
+  if (isNegative) {
+    *angle = -(*angle);
+  }
+
+  if (data & (1 << 6)) { // High bits
+    // Remove old high bits data
+    *angle &= 0x1F;
+    // Set new high bits data
+    *angle |= (data & 0x0F) << 5;
+    // Set the sign bit
+    isNegative = data & (1 << 4);
+  } else { // Low bits
+    // Remove old low bits data
+    *angle &= 0xFFE0;
+    // Set new low bits data
+    *angle |= data & 0x1F;
+  }
+
+  // Restore the sign
+  if (isNegative) {
+    *angle = -(*angle);
+  }
+
+  // Only absolute angles are received
+  if (data & (1 << 5)) {
+    fmt::print( "Received relative angle. Only absolute angles are supported.\n");
+  }
+}
+
 void AngleHandler::ReceiveAnglesUART() {
   // Read the lastest data from the serial port
   uint8_t receivedBytes[MAX_DATA_LENGTH];
   int nBytes =
-      m_serialConnection.readBytes(receivedBytes, MAX_DATA_LENGTH, 100);
+      m_serialConnection.readBytes(receivedBytes, MAX_DATA_LENGTH, 1);
   if (nBytes < 0) {
     fmt::print("Error while reading bytes. Error code: {}\n", nBytes);
     return;
@@ -161,43 +203,31 @@ void AngleHandler::ReceiveAnglesUART() {
     // No data received
     return;
   }
+  static uint8_t panAngleHighBits = 0b11000000;
+  static uint8_t panAngleLowBits = 0b10000000;
+  static uint8_t tiltAngleHighBits = 0b01000000;
+  static uint8_t tiltAngleLowBits = 0;
+
   for (int i = 0; i < nBytes; i++) {
     uint8_t data = receivedBytes[i];
-    int16_t *angle;
     if (data & (1 << 7)) {
-      angle = &m_panAngle;
+      if (data & (1 << 6)) {
+        panAngleHighBits = data;
+      } else {
+        panAngleLowBits = data;
+      }
     } else {
-      angle = &m_tiltAngle;
-    }
-
-    bool isNegative = *angle < 0;
-    if (isNegative) {
-      *angle = -(*angle);
-    }
-
-    if (data & (1 << 6)) {   // High bits
-      // Remove old high bits data
-      *angle &= 0x1F;
-      // Set new high bits data
-      *angle |= (data & 0x0F) << 5;
-      // Set the sign bit
-      isNegative = data & (1 << 4);
-    } else { // Low bits
-      // Remove old low bits data
-      *angle &= 0xFFE0;
-      // Set new low bits data
-      *angle |= data & 0x1F;
-    }
-
-    // Restore the sign
-    if (isNegative) {
-      *angle = -(*angle);
-    }
-
-    // Only absolute angles are received
-    if (data & (1 << 5)) {
-      fmt::print("Received relative angle. Only absolute angles are supported.\n");
+      if (data & (1 << 6)) {
+        tiltAngleHighBits = data;
+      } else {
+        tiltAngleLowBits = data;
+      }
     }
   }
-  fmt::print("Pan: {:<4} Tilt: {:<4}\n", m_panAngle, m_tiltAngle);
+
+  // Print the angle bits
+  DataToAngle(panAngleLowBits);
+  DataToAngle(panAngleHighBits);
+  DataToAngle(tiltAngleLowBits);
+  DataToAngle(tiltAngleHighBits);
 }
