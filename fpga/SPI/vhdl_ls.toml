@@ -1,6 +1,0 @@
-[libraries]
-lib.files = [
-  "spi.vhdl",
-  "spi_tb.vhdl",
-  "spi_test.vhdl",
-]
