@@ -32,8 +32,8 @@
 
 /*****************************   Constants   *******************************/
 /*****************************   Variables   *******************************/
-  short input;
-  short last_input = 0;
+  INT16S input;
+  INT16S last_input = 0;
 /*****************************   Functions   *******************************/
 void send_char(INT8U chr) {
   while (UART0_FR_R & (1 << 5))
@@ -159,7 +159,7 @@ int main(void) {
     if ((GPIO_PORTF_DATA_R & (1 << 4)) == 0) // Check if SW1 is pressed
     {
       GPIO_PORTF_DATA_R |= (1 << 1); // Turn on red led
-      send_protocol(0, 0); // send_protocol(TILT = 0 & PAN = 1, voltage)
+      send_protocol(0, 8.3); // send_protocol(TILT = 0 & PAN = 1, voltage)
       while ((GPIO_PORTF_DATA_R & (1 << 4)) == 0)
         ;// Only send one value per press
     } else {
@@ -182,7 +182,7 @@ int main(void) {
 
     if (!(GPIO_PORTF_DATA_R & (1 << 4)) == 0) // When Switches is not pressed check for MISO
     {
-        receive_protocol(&input);
+        receive_protocol(input);
         if (input != last_input)
         {
             last_input = input;
