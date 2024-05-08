@@ -17,6 +17,7 @@
 /***************** Include files **************/
 #include "emp_type.h"
 #include "gpio.h"
+#include "pwm.h"
 #include "systick.h"
 #include "tm4c123gh6pm.h"
 #include "uart.h"
@@ -24,8 +25,8 @@
 /***************** Defines ********************/
 
 /***************** Constants ******************/
-volatile INT16U panCount = 0;
-volatile INT16U tiltCount = 0;
+volatile INT16U panCount = 32768; // (2^16)/2
+volatile INT16U tiltCount = 32768; // (2^16)/2
 volatile INT16U ticks = 0;
 /***************** Variables ******************/
 /***************** Functions ******************/
@@ -37,8 +38,7 @@ void delay(INT32U count) {
   }
 }
 void send_char(INT8U chr) {
-  while (UART0_FR_R & (1 << 5))
-    ;
+  while (UART0_FR_R & (1 << 5));
   UART0_DR_R = chr;
 }
 
@@ -61,35 +61,84 @@ void send_count(INT16U count) {
 }
 
 /***************** End of module **************/
+INT16U speed = 5;
+void crement_pwm(INT16U *pwm_val, INT8U *dir) {
+  static INT8U mode = 0;
+  if (*dir == 1) {
+    set_port(IN1A, 1);
+    set_port(IN2A, 0);
+    if (mode == 0) {
+      (*pwm_val) += speed;
+      if (*pwm_val >= 12000) {
+        mode = 1;
+      }
+    } else if (*pwm_val > 0 && mode == 1) {
+      (*pwm_val) -= speed;
+    } else {
+      *dir = 0;
+    }
+  } else {
+    set_port(IN1A, 0);
+    set_port(IN2A, 1);
+    if (mode == 1) {
+      (*pwm_val) += speed;
+      if (*pwm_val >= 12000) {
+        mode = 0;
+      }
+    } else if (*pwm_val > 0 && mode == 0) {
+      (*pwm_val) -= speed;
+    } else {
+      *dir = 1;
+    }
+  }
+}
 
 int main(void) {
   setup_gpio();
   setup_uart0();
   setup_systick();
-  // setup_pwm();
+  setup_pwm();
+  //
+  INT16U temp_pan = 0;
+  INT16U temp_tilt = 0;
+  INT16U temp_ticks = 0;
+  INT16U temp_last_ticks = -1;
 
-  // Loop forever.
+  INT8U dir = 1;
+  INT16U pwm_val = 0;
   while (1) {
     if (get_port(SW1) == 0) {
-      set_port(ENA, 1);
-      set_port(IN1A, 1);
+      set_led_color(RED);
       ticks = 0;
-      while (get_port(SW1) == 0) {
-      }
-    } else if (get_port(SW2) == 0) {
-      set_port(ENA, 1);
-      set_port(IN2A, 1);
-      ticks = 0;
-      while (get_port(SW2) == 0) {
+      while (1) {
+        temp_ticks = ticks;
+        if (temp_ticks % 4 == 0 && temp_last_ticks != temp_ticks) {
+          crement_pwm(&pwm_val, &dir);
+          PWM0_0_CMPA_R = pwm_val;
+          temp_last_ticks = temp_ticks;
+          temp_tilt = tiltCount;
+          send_char('T');
+          send_char(',');
+          if(!dir){
+            send_char('-');
+          }
+          send_count(pwm_val);
+          send_char(',');
+          send_count(temp_tilt);
+          send_char(',');
+          send_count(temp_ticks);
+          send_char('\n');
+        }
       }
     } else {
-      set_port(ENA, 0);
+      dir = 1;
+      pwm_val = 0;
       set_port(IN1A, 0);
       set_port(IN2A, 0);
     }
-    if(get_port(Index1)){
+    if (get_port(Index1)) {
       set_led_color(RED);
-    } else{
+    } else {
       set_led_color(BLUE);
     }
   }
@@ -100,43 +149,25 @@ void GPIOA_handler(void) {
   // Index hall sensor
   if (GPIO_PORTA_MIS_R & 0b00000100) {
     // Pan hall sensor
-    panCount = 32768;
+    // panCount = 32768;
     GPIO_PORTA_ICR_R |= 0b00000100;
-    send_string("RP\n");
   } else if (GPIO_PORTA_MIS_R & 0b00001000) {
     // Tilt hall sensor
-    tiltCount = 32768;
+    // tiltCount = 32768;
     GPIO_PORTA_ICR_R |= 0b00001000;
-    send_string("RT\n");
   }
 }
 
 void GPIOC_handler(void) {
-  if (GPIO_PORTC_MIS_R & 0b00010000) {
-    if (get_port(Sensor1B) == 0) {
-      panCount++;
-    } else {
-      panCount--;
-    }
-    send_char('P');
-    send_char(' ');
-    send_count(panCount);
-    send_char(' ');
-    send_count(ticks);
-    send_char('\n');
-    GPIO_PORTC_ICR_R |= 0b00010000;
-  } else if (GPIO_PORTC_MIS_R & 0b01000000) {
+  if (GPIO_PORTC_MIS_R & 0b01000000) {
     if (get_port(Sensor2B) == 0) {
       tiltCount++;
+      set_led_color(RED);
     } else {
       tiltCount--;
+      set_led_color(BLUE);
     }
-    send_char('T');
-    send_char(' ');
-    send_count(tiltCount);
-    send_char(' ');
-    send_count(ticks);
-    send_char('\n');
+    // send_count(tiltCount);
     GPIO_PORTC_ICR_R |= 0b01000000;
   }
 }
