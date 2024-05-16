@@ -57,9 +57,10 @@ void SPI1_Read(unsigned char *data) {
     *data = SSI1_DR_R;            // Read received data
 }
 
-void SPI1_Write(unsigned char data) {
-  while ((SSI1_SR_R & (1<<1)) == 0)
-    ;               /* wait until Tx FIFO is not full */
-  SSI1_DR_R = data; /* transmit byte over SSI1Tx line */
+void Spi1Write(INT16U data) {
+  while ((SSI1_SR_R & (1 << 1)) == 0){} // wait until Tx FIFO is not full
+
+  // transmit byte over SSI1Tx line
+  SSI1_DR_R = data; 
 }
 /****************************** End Of Module *******************************/

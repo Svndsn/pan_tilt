@@ -24,7 +24,7 @@ SensorFusion::SensorFusion(float alpha, float gyroBias, float accelBias) {
   m_prevGyroMesure.yaw = 0;
 };
 
-void SensorFusion::ReSetAbsoluteAngles() {
+void SensorFusion::ResetAbsoluteAngles() {
   m_angle.pitch = 0;
   m_angle.roll = 0;
   m_angle.yaw = 0;

@@ -13,7 +13,7 @@ public:
 
   void getAngles(Axis &accelerometer, Axis &gyroscope, float Ts,
                  Axis *angleOutputs);
-  void ReSetAbsoluteAngles();
+  void ResetAbsoluteAngles();
 
 private:
   float m_alpha;

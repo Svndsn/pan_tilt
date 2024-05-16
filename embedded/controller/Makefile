@@ -6,6 +6,7 @@ LD := arm-none-eabi-ld
 OC := arm-none-eabi-objcopy
 OD := arm-none-eabi-objdump
 SZ := arm-none-eabi-size
+GDB := arm-none-eabi-gdb
 
 CFLAGS := -mthumb \
     -mcpu=cortex-m4 \
@@ -70,3 +71,13 @@ build/%.o: %.c Makefile
 main: $(OBJECTS)
 	$(LD) $(LDFLAGS) $(addprefix build/, $(notdir $^)) -o build/main.elf $(STDLIBS)
 	$(OC) $(OBJCOPYFLAGS) build/main.elf build/main.bin
+
+debug:
+	@echo "OpenOCD is required to be installed and running"
+	@echo "Run 'openocd --file (.cfg file)'"
+	@echo "Located here: /opt/homebrew/Cellar/open-ocd/0.12.0_1/share/openocd/scripts/board/ti_ek-tm4c123gxl.cfg\n"
+	$(GDB) -d ./src -ex 'file ./build/main.elf' -ex 'target extended-remote localhost:3333'
+USE_DEBUG := 1
+ifeq ($(USE_DEBUG),1)
+	CFLAGS += -g -DDEBUG
+endif

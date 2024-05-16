@@ -3,18 +3,27 @@
 #include "task.h"
 #include "semphr.h"
 
+#include <string.h>
+
 #include "tm4c123gh6pm.h"
+#include "projectdefs.h"
 #include "uart0.h"
 #include "emp_type.h"
 #include "projectdefs.h"
 
+typedef enum { Type, Length, Data, CheckSum } RxState_t ;
+
 // UART0 queues
-extern xQueueHandle q_uartDebug;
-extern xQueueHandle q_uartAngle; // Send current angle
+extern xQueueHandle q_uartDebug;    // Send debug messages
+extern xQueueHandle q_uartAngle;    // Send current angle
 extern xQueueHandle q_uartSetpoint; // Receive setpoint
+extern xQueueHandle q_uartVoltage;  // Send motor voltages
+extern xQueueHandle q_uartRawData;  // Input buffer
 // UART0 Mutex
-extern xSemaphoreHandle uart0RxMutex;
-extern xSemaphoreHandle uart0TxMutex;
+extern xSemaphoreHandle m_uartDebug;
+extern xSemaphoreHandle m_uartAngle;
+extern xSemaphoreHandle m_uartSetpoint;
+extern xSemaphoreHandle m_uartVoltage;
 
 void vUart0Init() {
   // Setup UART0
@@ -48,6 +57,14 @@ void vUart0Init() {
   UART0_LCRH_R |= 0b00000110; // even parity
   UART0_LCRH_R |= (1 << 4);   // Enable FIFO
 
+  // Setup interrupt
+  // clear the interrupt
+  UART0_ICR_R |= (1 << 4);
+  // Select fifo interrupt level
+  UART0_IFLS_R = 0b010000; // 1/2 full
+  UART0_IM_R |= (1 << 4); // Enable the receive interrupt
+  NVIC_EN0_R |= (1 << (INT_UART0 - 16)); // Enable the UART0 interrupt
+
   // Set the clock source
   UART0_CC_R = 0;
   // Enable the UART0
@@ -67,131 +84,247 @@ void vSendStringUart(const char *str) {
   }
 }
 
+void vCheckSum(INT8U *data, INT16U length, INT8U *checksum) {
+  for (INT16U i = 0; i < length; i++) {
+    *checksum ^= data[i];
+  }
+}
 void vSendDebugUart() {
   if(uxQueueMessagesWaiting(q_uartDebug) == 0) { return; }
 
   // Send debug data
   uartDebug_t debug_data;
-  while(xQueueReceive(q_uartDebug, &debug_data, 0)) {
-    vSendStringUart(debug_data.string);
+  if (xSemaphoreTake(m_uartDebug, 1)) {
+    while(xQueueReceive(q_uartDebug, &debug_data, 0)) {
+      INT8U checksum = 0;
+      INT8U data_type = DEBUG_STRING;
+      // Send the data type
+      vSendCharUart(data_type);
+      vCheckSum(&data_type, 1, &checksum);
+      // Send the length of the string
+      INT8U strlength = strlen(debug_data.string);
+      vSendCharUart(strlength);
+      vCheckSum(&strlength, 1, &checksum);
+
+      // Send the string
+      vSendStringUart(debug_data.string);
+      vCheckSum((INT8U *)debug_data.string, strlength, &checksum);
+
+      // Send the checksum
+      vSendCharUart(checksum);
+    }
+    // Release the mutex
+    xSemaphoreGive(m_uartDebug);
   }
-}
-
-// Format of angle data:
-// MBRS DDDD
-// A: Axis (1 = Pan, 0 = Tilt)
-// B: Bits  (1 = High bits, 0 = Low bits)
-// R: Relative (1 = Relative, 0 = Absolute)
-// S: Sign  (Data if B=0, Sign if B=1)
-// D: Data  (Always)
-
-void vSendAngleData(uartAngle_t angle_data) {
-  INT8U lowByte  = 0;
-  INT8U highByte = (1 << 6);
-
-  // Set axis bit
-  if (angle_data.axis == PAN) {
-    lowByte  |= (1 << 7);
-    highByte |= (1 << 7);
-  }
-
-  // Check if negative
-  if (angle_data.angle < 0) {
-    angle_data.angle = -angle_data.angle;
-    // Set sign bit
-    highByte |= (1 << 4);
-  }
-
-  // Set data bits
-  lowByte  |= angle_data.angle & 0b00011111;
-  highByte |= (angle_data.angle >> 5) & 0b00001111;
-
-  // Relative bit is ignored (Always absolute)
-
-  // Send data
-  vSendCharUart(lowByte);
-  vSendCharUart(highByte);
 }
 
 void vSendAnglesUart(){
   // Check if there are any messages in the queue
   if(!uxQueueMessagesWaiting(q_uartAngle)) { return; }
 
-  if (xSemaphoreTake(uart0TxMutex, 1)) {
-    // Send angle data (pan and tilt
+  if (xSemaphoreTake(m_uartAngle, 1)) {
+    // Send current angle (pan and tilt)
     uartAngle_t angle_data;
+
+    // Create a union to store the angle
+    union {
+      FP32 angle;
+      INT8U bytes[4];
+    } angle_u;
+    
     // Empty the queue to get the latest angles
     while (xQueueReceive(q_uartAngle, &angle_data, 0)) {
-      vSendAngleData(angle_data);
+      INT8U checksum = 0;
+      INT8U data_type;
+      if (angle_data.axis == PAN) {
+        data_type = ANGLE_PAN;
+      } else {
+        data_type = ANGLE_TILT;
+      }
+      vSendCharUart(data_type);
+      vCheckSum(&data_type, 1, &checksum);
+
+      // Send length of data (4 bytes FP32)
+      INT8U length = 4;
+      vSendCharUart(length);
+      vCheckSum(&length, 1, &checksum);
+
+      // Store the angle in the union
+      angle_u.angle = angle_data.angle;
+
+      // Send angle data
+      vSendCharUart(angle_u.bytes[0]);
+      vSendCharUart(angle_u.bytes[1]);
+      vSendCharUart(angle_u.bytes[2]);
+      vSendCharUart(angle_u.bytes[3]);
+
+      vCheckSum(angle_u.bytes, 4, &checksum);
+      // Send checksum
+      vSendCharUart(checksum);
     }
 
     // Release the mutex
-    xSemaphoreGive(uart0TxMutex);
+    xSemaphoreGive(m_uartAngle);
   }
 }
 
-void vDataToSetpoint(INT8U data, uartAngle_t *setpoint){
-  // *setpoint is already determined to be either pan or tilt
+void vSendMotorVoltageUart(){
+  // Check if there are any messages in the queue
+  if(!uxQueueMessagesWaiting(q_uartVoltage)) { return; }
 
-  // Check if the data is negative
-  BOOLEAN isNegative = setpoint->angle < 0 ? TRUE : FALSE;
-  // Make positive for bit manipulation
-  if (isNegative){
-    setpoint->angle = -setpoint->angle;
-  }
+  if (xSemaphoreTake(m_uartVoltage, 1)) {
+    // Send motor voltage
 
-  // High bits
-  if (data & (1 << 6)) {
-    // Remove old high bits
-    setpoint->angle &= 0x1F;
-    // Set new high bits
-    setpoint->angle |= (data & 0x0F) << 5;
-    // Set sign
-    isNegative = data & (1 << 4) ? TRUE : FALSE;
-  } else {
-    // Low bits
-    // Remove old low bits
-    setpoint->angle &= 0xFFE0;
-    // Set new low bits
-    setpoint->angle |= data & 0x1F;
-  }
+    uartVoltage_t voltage_data;
+    // Create a union to store the voltage
+    union {
+      FP32 voltage;
+      INT8U bytes[4];
+    } voltage_u;
+    
+    // Empty the queue to get the latest voltages
+    while (xQueueReceive(q_uartVoltage, &voltage_data, 0)) {
+      INT8U checksum = 0;
+      INT8U data_type;
+      if (voltage_data.motor == PAN) {
+        data_type = VOLTAGE_PAN;
+      } else {
+        data_type = VOLTAGE_TILT;
+      }
+      vSendCharUart(data_type);
+      vCheckSum(&data_type, 1, &checksum);
 
-  if (isNegative){
-    setpoint->angle = -setpoint->angle;
-  }
+      // Send length of data (4 bytes FP32)
+      INT8U length = 4;
+      vSendCharUart(length);
+      vCheckSum(&length, 1, &checksum);
 
-  if (data & (1 << 5)) {
-    // Set relative
-    setpoint->relative = TRUE;
-  } else {
-    // Set absolute
-    setpoint->relative = FALSE;
+      // Store the voltage in the union
+      voltage_u.voltage = voltage_data.voltage;
+
+      // Send voltage data
+      vSendCharUart(voltage_u.bytes[0]);
+      vSendCharUart(voltage_u.bytes[1]);
+      vSendCharUart(voltage_u.bytes[2]);
+      vSendCharUart(voltage_u.bytes[3]);
+
+      vCheckSum(voltage_u.bytes, 4, &checksum);
+      // Send checksum
+      vSendCharUart(checksum);
+    }
+
+    // Release the mutex
+    xSemaphoreGive(m_uartVoltage);
   }
 }
 
-void vReceiveSetpointsUart(){
+void vReceiveSetpointsUart() {
   // Return if there is no data
-  if(UART0_FR_R & (1 << 4)){ return; }
+  // if (!(UART0_FR_R & (1 << 4))) {
+  //   INT8U data = UART0_DR_R;
+  //   xQueueSendToBack(q_uartRawData, &data, 0);
+  // }
 
-  if (xSemaphoreTake(uart0RxMutex, 1)) {
-    // Initialize setpoints
-    static uartAngle_t pan_setpoint = {PAN, 0, FALSE};
-    static uartAngle_t tilt_setpoint = {TILT, 0, FALSE};
-    INT8U rxData;
-    while (!(UART0_FR_R & (1 << 4))) { // Receive 4 bytes
-        rxData = UART0_DR_R;
-        if (rxData & (1 << 7)) {
-          vDataToSetpoint(rxData, &pan_setpoint);
-        } else {
-          vDataToSetpoint(rxData, &tilt_setpoint);
-        }
+  INT32U n_data = uxQueueMessagesWaiting(q_uartRawData);
+  if (n_data == 0) {
+    return;
+  }
+
+  static RxState_t rx_state = Type;
+  static uartCommandType_t command_type;
+  static INT8U data_length;
+  static INT8U data_counter = 0;
+  static union {
+    FP32 value;
+    INT8U bytes[4];
+  } setpoint_u;
+  // Initialize setpoints
+  INT8U rxData;
+  for (INT32U i = 0; i < n_data; i++) {
+    xQueueReceive(q_uartRawData, &rxData, 0);
+    switch (rx_state) {
+    case Type: {
+      if (rxData <= 8) {
+        rx_state = Length;
+        command_type = rxData;
+      }
+      break;
     }
+    case Length: {
+      data_length = rxData;
+      if (data_length == 0 || data_length > 4) {
+        rx_state = Type;
+      } else {
+        rx_state = Data;
+        data_counter = 0;
+      }
+      break;
+    }
+    case Data: {
+      if (data_counter < data_length) {
+        setpoint_u.bytes[data_counter] = rxData;
+        data_counter++;
+      }
+      if (data_counter == data_length) {
+        rx_state = CheckSum;
+      }
+      break;
+    }
+    case CheckSum: {
+      uint8_t checksum = 0;
+      uint8_t data_type = command_type;
+      vCheckSum(&data_type, 1, &checksum);
+      vCheckSum(&data_length, 1, &checksum);
+      vCheckSum(setpoint_u.bytes, data_length, &checksum);
+      rx_state = Type;
+      if (checksum != rxData) {
+        continue;
+      }
+      // Checksum passed
+      // Set the setpoint
+      if (xSemaphoreTake(m_uartSetpoint, 1)) {
+        switch (command_type) {
+        case SETPOINT_PAN_ABSOLUTE: {
+          uartAngle_t setpoint = {PAN, setpoint_u.value, FALSE};
+          xQueueSendToBack(q_uartSetpoint, &setpoint, 0);
+          break;
+        }
+        case SETPOINT_TILT_ABSOLUTE: {
+          uartAngle_t setpoint = {TILT, setpoint_u.value, FALSE};
+          xQueueSendToBack(q_uartSetpoint, &setpoint, 0);
+          break;
+        }
+        case SETPOINT_PAN_RELATIVE: {
+          uartAngle_t setpoint = {PAN, setpoint_u.value, TRUE};
+          xQueueSendToBack(q_uartSetpoint, &setpoint, 0);
+          break;
+        }
+        case SETPOINT_TILT_RELATIVE: {
+          uartAngle_t setpoint = {TILT, setpoint_u.value, TRUE};
+          xQueueSendToBack(q_uartSetpoint, &setpoint, 0);
+          break;
+        }
+        default:
+          break;
+        }
+        rx_state = Type;
+        xSemaphoreGive(m_uartSetpoint);
+      }
+      break;
+    }
+    }
+  }
+}
 
-    xQueueSendToBack(q_uartSetpoint, &pan_setpoint, 0);
-    xQueueSendToBack(q_uartSetpoint, &tilt_setpoint, 0);
-
-    // Release the mutex
-    xSemaphoreGive(uart0RxMutex);
+void UART0_Handler() {
+  // Clear the interrupt
+  UART0_ICR_R |= (1 << 4);
+  // This only recieves data and puts it in the queue
+  // Only called when data is coming in fast to avoid missing data
+  // Read the data
+  while(!(UART0_FR_R & (1 << 4))) {
+    INT8U data = UART0_DR_R;
+    xQueueSendToBackFromISR(q_uartRawData, &data, 0);
   }
 }
 
@@ -201,14 +334,17 @@ void vUart0Task(void *pvParameters) {
     // Send debug
     vSendDebugUart();
 
-    // Send angle
+    // Send angles
     vSendAnglesUart();
+
+    // Send motor voltage
+    vSendMotorVoltageUart();
 
     // Receive setpoint
     vReceiveSetpointsUart();
 
     // Delay task
-    vTaskDelay(50 / portTICK_RATE_MS); 
+    vTaskDelay(2 / portTICK_RATE_MS); 
   }
 
   // Delete the task if it ever breaks out of the loop above

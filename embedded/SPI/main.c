@@ -19,7 +19,6 @@
 
 /***************************** Include files *******************************/
 #include "SPI1.h"
-#include "delay.h"
 #include "led.h"
 #include "tm4c123gh6pm.h"
 #include "uart.h"
@@ -39,8 +38,7 @@ void delay(INT32U count) {
   }
 }
 void send_char(INT8U chr) {
-  while (UART0_FR_R & (1 << 5))
-    ;
+  while (UART0_FR_R & (1 << 5)) {}
   UART0_DR_R = chr;
 }
 
@@ -50,20 +48,26 @@ void send_string(char *str) {
     str++;
   }
 }
+
 int main(void) {
   SPI1_init();
   LED_init();
   setup_uart0();
-  unsigned char val1 = 'U'; // 0b01010101
 
   while (1) {
 
     if ((GPIO_PORTF_DATA_R & (1 << 4)) == 0) // Check if SW1 is pressed
     {
       // Turn on red led
+      GPIO_PORTF_DATA_R &= ~0b1110;
       GPIO_PORTF_DATA_R |= (1 << 1);
-      // SPI1_Write(val1);
-      send_string("Sending data to SPI1\n");
+      Spi1Write(0x8000);
+      while ((GPIO_PORTF_DATA_R & (1 << 4)) == 0)
+        ;// Only send one value pr. press
+    } else if((GPIO_PORTF_DATA_R & (1 << 0)) == 0){
+      GPIO_PORTF_DATA_R &= ~0b1110;
+      GPIO_PORTF_DATA_R |= (1 << 2);
+      Spi1Write(0x8000);
       while ((GPIO_PORTF_DATA_R & (1 << 4)) == 0)
         ;// Only send one value pr. press
     } else {

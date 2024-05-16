@@ -26,6 +26,9 @@ Vision::Vision(std::string windowName, int cameraIndex) {
 
   // Set the tracking state
   m_trackingActive = false;
+
+  // Fill the frame with black color
+  m_frame = cv::Mat::zeros(cv::Size(640, 480), CV_8UC3);
 }
 
 Vision::~Vision() {
@@ -115,6 +118,7 @@ void Vision::UpdateCamera() {
   // Check if the frame is empty (end of video)
   if (videoFrame.empty()) {
     fmt::print(stderr, "Error: Unable to capture frame\n");
+    // Fill the frame with black color
   } else {
     // Scale the frame down to get better performance
     m_frame.release();
@@ -124,10 +128,10 @@ void Vision::UpdateCamera() {
   }
 }
 
-std::pair<int16_t, int16_t> Vision::GetAngles() const {
-  int16_t panAngle = m_panAngle2Center / (IPHONE_13_PRO_WIDTH * VIDEO_SCALE) *
+std::pair<float, float> Vision::GetAngles() const {
+  float panAngle = m_panAngle2Center / (IPHONE_13_PRO_WIDTH * VIDEO_SCALE) *
                      IPHONE_13_PRO_FOV_H;
-  int16_t tiltAngle = m_tiltAngle2Center / (IPHONE_13_PRO_HEIGHT * VIDEO_SCALE) *
+  float tiltAngle = m_tiltAngle2Center / (IPHONE_13_PRO_HEIGHT * VIDEO_SCALE) *
                       IPHONE_13_PRO_FOV_V;
   return std::make_pair(panAngle, tiltAngle);
 }

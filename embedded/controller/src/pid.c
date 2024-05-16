@@ -1,4 +1,5 @@
 #include "FreeRTOS.h"
+#include "emp_type.h"
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
@@ -8,20 +9,29 @@
 #include "spi1.h"
 #include "uart0.h"
 
+#define PAN_ANGLE_MIN -180
+#define PAN_ANGLE_MAX 180
+#define TILT_ANGLE_MIN -180
+#define TILT_ANGLE_MAX 180
+#define VOLTAGE_TO_DUTY 85.25f
+
 // UART0 queues
 extern xQueueHandle q_uartDebug;
 extern xQueueHandle q_uartAngle; // Send current angle
 extern xQueueHandle q_uartSetpoint; // Receive setpoint
+extern xQueueHandle q_uartVoltage; // Send motor voltages
 // UART0 Mutex
-extern xSemaphoreHandle uart0RxMutex;
-extern xSemaphoreHandle uart0TxMutex;
+extern xSemaphoreHandle m_uartDebug;
+extern xSemaphoreHandle m_uartAngle;
+extern xSemaphoreHandle m_uartSetpoint;
+extern xSemaphoreHandle m_uartVoltage;
 
 // SPI1 queues
 extern xQueueHandle q_spiDutyCycle; // Send duty cycle
 extern xQueueHandle q_spiAngle; // Receive angle
 // SPI1 Mutex
-extern xSemaphoreHandle spi1RxMutex;
-extern xSemaphoreHandle spi1TxMutex;
+extern xSemaphoreHandle m_spiDutyCycle;
+extern xSemaphoreHandle m_spiAngle;
 
 
 PID_t pidPan;
@@ -29,7 +39,7 @@ PID_t pidTilt;
 
 void vControllerInit() {
   // Pan PID
-  pidPan.Kp = 0.1f;
+  pidPan.Kp = 0.5f;
   pidPan.Kd = 0.f;
   pidPan.Ki = 0.f;
 
@@ -47,8 +57,8 @@ void vControllerInit() {
   pidPan.measurement = 0.f;
 
   // Tilt PID
-  pidTilt.Kp = 0.1f;
-  pidTilt.Kd = 0.f;
+  pidTilt.Kp = 0.5f;
+  pidTilt.Kd = 0.005f;
   pidTilt.Ki = 0.f;
 
   pidTilt.T = 0.01f; // 100Hz
@@ -67,6 +77,9 @@ void vControllerInit() {
 
 void vUpdateController(PID_t *pid) {
   pid->error = pid->setpoint - pid->measurement;
+  if (pid->error < 0.8f && pid->error > -0.8f) {
+    pid->error = 0;
+  }
 
   // Proportional term
   FP32 Pout = pid->Kp * pid->error;
@@ -80,13 +93,14 @@ void vUpdateController(PID_t *pid) {
   // Integral term
   FP32 Iout = pid->Ki * pid->integrator;
 
-  // Derivative
+  // Derivative (remove setpoint step)
   FP32 derivative = (pid->error - pid->prevError) / pid->T - (pid->setpoint - pid->prevSetpoint) / pid->T;
   // Derivative term
   FP32 Dout = pid->Kd * derivative;
 
   // Calculate total output
   pid->output = Pout + Iout + Dout;
+  // pid->output = 0;
 
   // Update previous values
   pid->prevOutput = pid->output; // Done before limiting (use for anti-windup)
@@ -106,33 +120,44 @@ void vUpdateController(PID_t *pid) {
 void vUpdateSetpoints() {
   if (!uxQueueMessagesWaiting(q_uartSetpoint)) { return; }
 
-  if (xSemaphoreTake(uart0RxMutex, 1)) {
+  if (xSemaphoreTake(m_uartSetpoint, 1)) {
     uartAngle_t setpoint;
     while (xQueueReceive(q_uartSetpoint, &setpoint, 0)) {
       // Setpoint received
       if (setpoint.axis == PAN) {
         if (setpoint.relative) {
-          pidPan.setpoint += setpoint.angle;
+          pidPan.setpoint = pidPan.measurement + setpoint.angle;
         } else {
           pidPan.setpoint = setpoint.angle;
         }
       } else {
         if (setpoint.relative) {
-          pidTilt.setpoint += setpoint.angle;
+          pidTilt.setpoint = pidTilt.measurement + setpoint.angle;
         } else {
           pidTilt.setpoint = setpoint.angle;
         }
       }
     }
-    // TODO: Add limits to setpoints
-    xSemaphoreGive(uart0RxMutex);
+
+    if (pidPan.setpoint > PAN_ANGLE_MAX) {
+      pidPan.setpoint = PAN_ANGLE_MAX;
+    } else if (pidPan.setpoint < PAN_ANGLE_MIN) {
+      pidPan.setpoint = PAN_ANGLE_MIN;
+    }
+    if (pidTilt.setpoint > TILT_ANGLE_MAX) {
+      pidTilt.setpoint = TILT_ANGLE_MAX;
+    } else if (pidTilt.setpoint < TILT_ANGLE_MIN) {
+      pidTilt.setpoint = TILT_ANGLE_MIN;
+    }
+
+    xSemaphoreGive(m_uartSetpoint);
   }
 }
 
 void vReceiveAngles() {
   if(!uxQueueMessagesWaiting(q_spiAngle)) { return; }
 
-  if (xSemaphoreTake(spi1RxMutex, 1)) {
+  if (xSemaphoreTake(m_spiAngle, 1)) {
     spiAngle_t angle;
     while (xQueueReceive(q_spiAngle, &angle, 0)) {
       if (angle.axis == PAN) {
@@ -141,37 +166,61 @@ void vReceiveAngles() {
         pidTilt.measurement = angle.angle;
       }
     }
-
     // Release the mutex
-    xSemaphoreGive(spi1RxMutex);
+    xSemaphoreGive(m_spiAngle);
   }
 }
 
 void vSendAngles() {
   // Get the mutex
-  if (xSemaphoreTake(uart0TxMutex, 1)) {
-    uartAngle_t panAngle = {PAN, pidPan.setpoint, FALSE};
-    uartAngle_t tiltAngle = {TILT, pidTilt.setpoint, FALSE};
-    // uartAngle_t panAngle = {PAN, pidPan.measurement, FALSE};
-    // uartAngle_t tiltAngle = {TILT, pidTilt.measurement, FALSE};
+  if (xSemaphoreTake(m_uartAngle, 1)) {
+    uartAngle_t panAngle = {PAN, pidPan.measurement, FALSE};
+    uartAngle_t tiltAngle = {TILT, pidTilt.measurement, FALSE};
     xQueueSendToBack(q_uartAngle, &panAngle, 0);
     xQueueSendToBack(q_uartAngle, &tiltAngle, 0);
 
     // Release the mutex
-    xSemaphoreGive(uart0TxMutex);
+    xSemaphoreGive(m_uartAngle);
   }
 }
 
 void vSendDutyCycles() {
-  if(xSemaphoreTake(spi1TxMutex, 1)) {
+  if(xSemaphoreTake(m_spiDutyCycle, 0)) {
+    INT16S panDuty = pidPan.output * VOLTAGE_TO_DUTY;
+    INT16S tiltDuty = pidTilt.output * VOLTAGE_TO_DUTY;
+
+    // Make sure the duty cycle is within limits
+    if (panDuty > 1023) {
+      panDuty = 1023;
+    } else if (panDuty < -1023) {
+      panDuty = -1023;
+    }
+    if (tiltDuty > 1023) {
+      tiltDuty = 1023;
+    } else if (tiltDuty < -1023) {
+      tiltDuty = -1023;
+    }
+    spiDutyCycle_t panDutyCycle = {PAN, panDuty};
+    spiDutyCycle_t tiltDutyCycle = {TILT, tiltDuty};
+    
     // Send the duty cycles (output from the PID controller
-    spiDutyCycle_t panDutyCycle = {PAN, pidPan.output};
-    spiDutyCycle_t tiltDutyCycle = {TILT, pidTilt.output};
     xQueueSendToBack(q_spiDutyCycle, &panDutyCycle, 0);
     xQueueSendToBack(q_spiDutyCycle, &tiltDutyCycle, 0);
 
     // Release the mutex
-    xSemaphoreGive(spi1TxMutex);
+    xSemaphoreGive(m_spiDutyCycle);
+  }
+}
+
+void vSendVoltages(){
+  if(xSemaphoreTake(m_uartVoltage, 1)) {
+    uartVoltage_t panVoltage = {PAN, pidPan.output};
+    uartVoltage_t tiltVoltage = {TILT, pidTilt.output};
+    xQueueSendToBack(q_uartVoltage, &panVoltage, 0);
+    xQueueSendToBack(q_uartVoltage, &tiltVoltage, 0);
+
+    // Release the mutex
+    xSemaphoreGive(m_uartVoltage);
   }
 }
 
@@ -188,7 +237,7 @@ void vControllerTask() {
     vUpdateSetpoints();
 
     // Get the latest measurement (take all values from q_spiAngle)
-    // vReceiveAngles();
+    vReceiveAngles();
 
     // Send the latest measurements to the computer (q_uartAngle)
     vSendAngles();
@@ -198,7 +247,10 @@ void vControllerTask() {
     vUpdateController(&pidTilt);
 
     // Send the latest output to the motor (q_spiDutyCycle)
-    // vSendDutyCycles();
+    vSendDutyCycles();
+    
+    // Send the latest output to the computer (q_uartVoltage)
+    vSendVoltages();
 
     // Make sure the task runs at 100Hz
     vTaskDelayUntil(&xLastWakeTime, CONTROLLER_PERIOD_MS / portTICK_RATE_MS);

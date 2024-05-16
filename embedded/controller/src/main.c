@@ -16,16 +16,20 @@
 xQueueHandle q_uartDebug;
 xQueueHandle q_uartAngle; // Send current angle
 xQueueHandle q_uartSetpoint; // Receive setpoint
+xQueueHandle q_uartVoltage; // Receive setpoint
+xQueueHandle q_uartRawData; // Input buffer
 // UART0 Mutex
-xSemaphoreHandle uart0RxMutex;
-xSemaphoreHandle uart0TxMutex;
+xSemaphoreHandle m_uartDebug;
+xSemaphoreHandle m_uartAngle;
+xSemaphoreHandle m_uartSetpoint;
+xSemaphoreHandle m_uartVoltage;
 
 // SPI1 queues
 xQueueHandle q_spiDutyCycle; // Send duty cycle
 xQueueHandle q_spiAngle; // Receive angle
 // SPI1 Mutex
-xSemaphoreHandle spi1RxMutex;
-xSemaphoreHandle spi1TxMutex;
+xSemaphoreHandle m_spiDutyCycle;
+xSemaphoreHandle m_spiAngle;
 
 void setup_hardware() {
   // Enable clocks
@@ -46,15 +50,19 @@ int main() {
   // Create the queues
   q_uartDebug    = xQueueCreate(20, sizeof(uartDebug_t));
   q_uartAngle    = xQueueCreate(20, sizeof(uartAngle_t));
-  q_uartSetpoint = xQueueCreate(20, sizeof(uartAngle_t));
+  q_uartSetpoint = xQueueCreate(40, sizeof(uartAngle_t));
+  q_uartVoltage  = xQueueCreate(20, sizeof(uartVoltage_t));
   q_spiDutyCycle = xQueueCreate(20, sizeof(spiDutyCycle_t));
   q_spiAngle     = xQueueCreate(20, sizeof(spiAngle_t));
+  q_uartRawData  = xQueueCreate(255, sizeof(INT8U));
 
   // Create the mutexes
-  uart0RxMutex = xSemaphoreCreateMutex();
-  uart0TxMutex = xSemaphoreCreateMutex();
-  spi1RxMutex  = xSemaphoreCreateMutex();
-  spi1TxMutex  = xSemaphoreCreateMutex();
+  m_uartDebug    = xSemaphoreCreateMutex();
+  m_uartAngle    = xSemaphoreCreateMutex();
+  m_uartSetpoint = xSemaphoreCreateMutex();
+  m_uartVoltage  = xSemaphoreCreateMutex();
+  m_spiDutyCycle = xSemaphoreCreateMutex();
+  m_spiAngle     = xSemaphoreCreateMutex();
 
   // Create the tasks
   xTaskCreate(vStatusLedTask,  "Status LED",     USERTASK_STACK_SIZE, NULL, LOW, NULL);
