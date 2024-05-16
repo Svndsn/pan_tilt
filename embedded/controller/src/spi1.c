@@ -6,6 +6,7 @@
 #include "tm4c123gh6pm.h"
 #include "emp_type.h"
 #include "spi1.h"
+#include "uart0.h"
 
 #define ANGLE_COUNT_CENTER 512
 // 360 / 450
@@ -17,8 +18,13 @@
 extern xQueueHandle q_spiDutyCycle; // Send duty cycle
 extern xQueueHandle q_spiAngle; // Receive angle
 // SPI1 Mutex
-extern xSemaphoreHandle spi1RxMutex;
-extern xSemaphoreHandle spi1TxMutex;
+extern xSemaphoreHandle m_spiDutyCycle;
+extern xSemaphoreHandle m_spiAngle;
+
+// Debug
+extern xQueueHandle q_uartDebug;
+extern xSemaphoreHandle m_uartDebug;
+
 
 void vSpi1Init() {
   // Enable clock to SPI1, GPIOD and GPIOF
@@ -83,7 +89,7 @@ void vSendDutyCyclesSpi() {
   if (!uxQueueMessagesWaiting(q_spiDutyCycle)) { return; }
 
   // Get the mutex
-  if (xSemaphoreTake(spi1TxMutex, 1)) {
+  if (xSemaphoreTake(m_spiDutyCycle, 1)) {
     spiDutyCycle_t dutyCycle;
     static spiDutyCycle_t dutyCyclePan = {PAN, 0};
     static spiDutyCycle_t dutyCycleTilt = {TILT, 0};
@@ -100,25 +106,25 @@ void vSendDutyCyclesSpi() {
     vSendDutyCycleData(dutyCycleTilt);
 
     // Release the mutex
-    xSemaphoreGive(spi1TxMutex);
+    xSemaphoreGive(m_spiDutyCycle);
   }
 }
 
 void vDataToAngle(INT16U data, spiAngle_t *angle){
   INT16S count = data & 0x3FF;
+  FP32 angleValue;
   // Translate the count to an angle
   // Angle 0 is at 512
   if(angle->axis == PAN){
-    count = count - ANGLE_COUNT_CENTER;
-    count = count * ANGLE_COUNT_RATIO_PAN;
+    angleValue = (count - ANGLE_COUNT_CENTER) * ANGLE_COUNT_RATIO_PAN;
   } else {
-    count = count - ANGLE_COUNT_CENTER;
-    count = count * ANGLE_COUNT_RATIO_TILT;
+    angleValue = (count - ANGLE_COUNT_CENTER) * ANGLE_COUNT_RATIO_TILT;
   }
 
   // Set the angle
-  angle->angle = count;
+  angle->angle = angleValue;
 }
+
 // Receive setpoint
 void vReceiveCountsSpi(){
   if (!(SSI1_SR_R & (1 << 2))) { return; } // Return if there is no data
@@ -132,24 +138,30 @@ void vReceiveCountsSpi(){
   // X: Unused
 
   // Get the mutex
-  if (xSemaphoreTake(spi1RxMutex, 1)) {
-    spiAngle_t panAngle = {PAN, 0};
-    spiAngle_t tiltAngle = {TILT, 0};
+  if (xSemaphoreTake(m_spiAngle, 1)) {
+    static spiAngle_t panAngle = {PAN, 0};
+    static spiAngle_t tiltAngle = {TILT, 0};
     INT16U rxData;
-    while (Spi1Read(&rxData)) { 
+
+    while (Spi1Read(&rxData)) {
+      // if ((rxData & 0x3FF) > 980 || (rxData & 0x3FF) < 40) {
+      if (rxData == 0) {//65535
+        // Should never happen
+        continue;
+      }
+
       // Check if the data is for pan or tilt
       if (rxData & (1 << 15)) {
         vDataToAngle(rxData, &panAngle);
+        xQueueSendToBack(q_spiAngle, &panAngle, 0);
       } else {
         vDataToAngle(rxData, &tiltAngle);
+        xQueueSendToBack(q_spiAngle, &tiltAngle, 0);
       }
     }
-    // Send the angle to the queue
-    xQueueSendToBack(q_spiAngle, &panAngle, 0);
-    xQueueSendToBack(q_spiAngle, &tiltAngle, 0);
 
     // Release the mutex
-    xSemaphoreGive(spi1RxMutex);
+    xSemaphoreGive(m_spiAngle);
   }
 }
 
@@ -162,10 +174,9 @@ void vSpi1Task(void *pvParameters) {
     vReceiveCountsSpi();
 
     // Delay task
-    vTaskDelay(5 / portTICK_PERIOD_MS);
+    vTaskDelay(2 / portTICK_PERIOD_MS);
   }
 
   // Delete the task if it ever breaks out of the loop above
   vTaskDelete(NULL);
 }
-

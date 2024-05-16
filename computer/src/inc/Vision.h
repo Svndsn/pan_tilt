@@ -45,7 +45,7 @@ public:
 
   // Get the angles to make the object in the center of the frame
   // Returns a pair of pan and tilt angles
-  std::pair<int16_t, int16_t> GetAngles() const;
+  std::pair<float, float> GetAngles() const;
 
   // Put text on the frame
   void PutText(const std::string &text, int x, int y, double fontScale,

@@ -39,7 +39,10 @@ public:
   Tracking GetTracking() const;
   
   // Is comfirm button pressed
-  bool IsConfirmPressed() const;
+  bool IsConfirmPressed();
+
+  // Is home button pressed
+  bool IsHomePressed();
 
   // Toggle tracking of systen
   void SetLED(int red, int green, int blue) const;
@@ -67,4 +70,7 @@ private:
   float m_axisTouchX, m_axisTouchY = 0.0f;
   bool m_closeRequested; // Triangle 
   bool m_isConnected;
+
+  bool m_homePressed;
+  bool m_confirmPressed;
 };

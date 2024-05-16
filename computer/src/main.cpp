@@ -26,7 +26,6 @@ int main() {
 
   // For timings
   auto startMS = SDL_GetTicks();
-  auto lastConfirmed = SDL_GetTicks();
 
   // Main loop
   while (!controller.CloseRequested()) {
@@ -40,7 +39,6 @@ int main() {
       startMS = endMS;
     } else {
       continue;
-
     }
 
     // This section of code will run at FPS
@@ -48,7 +46,14 @@ int main() {
 
     // Get the current frame from the camera
     vision.UpdateCamera();
-    angleHandler.ReceiveAngles();
+
+    angleHandler.ReceiveUART();
+
+    if (controller.IsHomePressed()) {
+      angleHandler.SetAbsoluteAngles(0.f, 0.f);
+      fmt::print("Homing\n");
+      fmt::print("Tracking mode: {}\n", (int)controller.GetTracking());
+    }
 
     // Handle tracking
     switch (controller.GetTracking()) {
@@ -57,19 +62,19 @@ int main() {
       break;
     case Tracking::JOYSTICK: {
         const auto [pan, tilt] = controller.GetLeftAxis();
-        angleHandler.SetRelativeAngles(pan * 2, tilt * 2);
+        angleHandler.SetRelativeAngles(pan * 20, tilt * 20);
         vision.PutText("Joystick Tracking", 10, 20, 0.5, cv::Scalar(0, 255, 0), 1);
       break;
     }
     case Tracking::MOVEMENT: {
       const auto [pan, tilt] = controller.GetAngles();
-      angleHandler.SetAbsoluteAngles(pan, tilt);
+      angleHandler.SetAbsoluteAngles(pan, -tilt);
       vision.PutText("Movement Tracking", 10, 20, 0.5, cv::Scalar(0, 255, 0), 1);
       break;
     }
     case Tracking::TOUCH: {
       const auto [pan, tilt] = controller.GetTouchAxis();
-      angleHandler.SetRelativeAngles(pan * 5, tilt * 5);
+      angleHandler.SetRelativeAngles(pan * 2, tilt * 2);
       vision.PutText("Touch Tracking", 10, 20, 0.5, cv::Scalar(0, 255, 0), 1);
       break;
     }
@@ -83,11 +88,7 @@ int main() {
 
         // Press the confirm button (X) to start tracking
         if (controller.IsConfirmPressed()) {
-          // Only confirm if the last confirmation was minimum 500ms ago
-          if (lastConfirmed + 500 < SDL_GetTicks()) {
-            lastConfirmed = SDL_GetTicks();
-            vision.SetTrackingActive(true);
-          }
+          vision.SetTrackingActive(true);
         }
       } else {
         // Tracking active
@@ -95,14 +96,12 @@ int main() {
 
         // Calculate the angles based on
         const auto [pan2Center, tilt2Center] = vision.GetAngles();
-        angleHandler.SetRelativeAngles(pan2Center, tilt2Center);
+        const auto [panAngle, tiltAngle] = angleHandler.GetAngles();
+        angleHandler.SetAbsoluteAngles(panAngle + pan2Center * 0.8f, tiltAngle - tilt2Center * 0.8f);
 
         // Press the confirm button (X) to stop tracking
         if (controller.IsConfirmPressed()) {
-          if (lastConfirmed + 500 < SDL_GetTicks()) {
-            lastConfirmed = SDL_GetTicks();
-            vision.SetTrackingActive(false);
-          }
+          vision.SetTrackingActive(false);
         }
       }
       if (vision.IsTrackingActive()) {
@@ -116,17 +115,22 @@ int main() {
       fmt::print("Unknown tracking method: {}\n", (int)controller.GetTracking());
       break;
     }
+    // The current voltage of pan and tilt
+    vision.PutText(fmt::format("Voltage:  Pan: {:<4.4} Tilt: {:<4.4}",
+                               angleHandler.GetVoltage().first,
+                               angleHandler.GetVoltage().second),
+                   10, 40, 0.5, cv::Scalar(255, 255, 255), 1);
     // The current angle of pan and tilt
-    vision.PutText(fmt::format("Angle: Pan: {:<4} Tilt: {:<4}",
+    vision.PutText(fmt::format("Angle:    Pan: {:<4.4} Tilt: {:<4.4}",
                                angleHandler.GetAngles().first,
                                angleHandler.GetAngles().second),
-                   10, 40, 0.5, cv::Scalar(255, 255, 255), 1);
+                   10, 60, 0.5, cv::Scalar(255, 255, 255), 1);
 
     // The setpoint angle of pan and tilt
-    vision.PutText(fmt::format("Setpoint: Pan: {:<4} Tilt: {:<4}",
+    vision.PutText(fmt::format("Setpoint: Pan: {:<4.4} Tilt: {:<4.4}",
                                angleHandler.GetSetpoints().first,
                                angleHandler.GetSetpoints().second),
-                   10, 60, 0.5, cv::Scalar(255, 255, 255), 1);
+                   10, 80, 0.5, cv::Scalar(255, 255, 255), 1);
 
     // Update the window with the new frame
     vision.UpdateWindow();

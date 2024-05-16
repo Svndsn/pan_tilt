@@ -126,18 +126,17 @@ void Controller::Update() {
         m_closeRequested = true;
         break;
       case SDL_GAMEPAD_BUTTON_SOUTH:
-        // Confirm button
+        m_confirmPressed = true;
         break;
       case SDL_GAMEPAD_BUTTON_WEST:
-        fmt::print("Home\n");
-        m_axisRightX = 0;
-        m_tiltAngle = 0;
-        break;
-      case SDL_GAMEPAD_BUTTON_EAST:
         if (m_tracking == Tracking::MOVEMENT) {
           fmt::print("Reset sensor reference\n");
-          m_sensorFusion.ReSetAbsoluteAngles();
+          m_sensorFusion.ResetAbsoluteAngles();
         }
+        break;
+      case SDL_GAMEPAD_BUTTON_EAST:
+        fmt::print("Home\n");
+        m_homePressed = true;
         break;
       default:
         break;
@@ -208,12 +207,20 @@ void Controller::Update() {
 
 bool Controller::CloseRequested() const { return m_closeRequested; }
 
-bool Controller::IsConfirmPressed() const{
-  bool confirmPressed = false;
-  if (m_isConnected) {
-    confirmPressed = SDL_GetGamepadButton(m_gamepad, SDL_GAMEPAD_BUTTON_SOUTH);
+bool Controller::IsConfirmPressed() {
+  if(m_confirmPressed){
+    m_confirmPressed = false;
+    return true;
   }
-  return confirmPressed;
+  return false;
+}
+
+bool Controller::IsHomePressed(){
+  if(m_homePressed){
+    m_homePressed = false;
+    return true;
+  }
+  return false;
 }
 
 Tracking Controller::GetTracking() const { return m_tracking; }

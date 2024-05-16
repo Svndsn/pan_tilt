@@ -19,6 +19,7 @@
 
 #ifndef SPI1_H_
 #define SPI1_H_
+#include "emp_type.h"
 
 /***************************** Include files *******************************/
 
@@ -34,7 +35,7 @@ void SPI1_init(void);
 *   Output   : -
 *   Function : Test function
 ******************************************************************************/
-void SPI1_Write(unsigned char);
+void Spi1Write(INT16U data);
 void SPI1_Read(unsigned char *data);
 
 
