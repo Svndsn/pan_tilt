@@ -34,8 +34,8 @@ extern xSemaphoreHandle m_spiDutyCycle;
 extern xSemaphoreHandle m_spiAngle;
 
 
-PID_t pidPan;
-PID_t pidTilt;
+static PID_t pidPan;
+static PID_t pidTilt;
 
 void vControllerInit() {
   // Pan PID

@@ -6,7 +6,6 @@
 #include "tm4c123gh6pm.h"
 #include "emp_type.h"
 #include "spi1.h"
-#include "uart0.h"
 
 #define ANGLE_COUNT_CENTER 512
 // 360 / 450

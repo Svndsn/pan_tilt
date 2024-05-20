@@ -4,11 +4,8 @@
 #include "task.h"
 #include "semphr.h"
 
-#include <string.h>
-
 // Project includes
 #include "tm4c123gh6pm.h"
-#include "uart0.h"
 #include "status_led.h"
 
 
