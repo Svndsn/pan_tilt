@@ -62,13 +62,13 @@ int main() {
       break;
     case Tracking::JOYSTICK: {
         const auto [pan, tilt] = controller.GetLeftAxis();
-        angleHandler.SetRelativeAngles(pan * 20, tilt * 20);
+        angleHandler.SetRelativeAngles(pan * 10, -tilt * 10);
         vision.PutText("Joystick Tracking", 10, 20, 0.5, cv::Scalar(0, 255, 0), 1);
       break;
     }
     case Tracking::MOVEMENT: {
       const auto [pan, tilt] = controller.GetAngles();
-      angleHandler.SetAbsoluteAngles(pan, -tilt);
+      angleHandler.SetAbsoluteAngles(pan, tilt);
       vision.PutText("Movement Tracking", 10, 20, 0.5, cv::Scalar(0, 255, 0), 1);
       break;
     }
@@ -96,8 +96,8 @@ int main() {
 
         // Calculate the angles based on
         const auto [pan2Center, tilt2Center] = vision.GetAngles();
-        const auto [panAngle, tiltAngle] = angleHandler.GetAngles();
-        angleHandler.SetAbsoluteAngles(panAngle + pan2Center * 0.8f, tiltAngle - tilt2Center * 0.8f);
+          const auto [pan, tilt] = angleHandler.GetAngles();
+        angleHandler.SetAbsoluteAngles(pan + pan2Center, 0);
 
         // Press the confirm button (X) to stop tracking
         if (controller.IsConfirmPressed()) {
@@ -116,18 +116,18 @@ int main() {
       break;
     }
     // The current voltage of pan and tilt
-    vision.PutText(fmt::format("Voltage:  Pan: {:<4.4} Tilt: {:<4.4}",
+    vision.PutText(fmt::format("Voltage:  Pan: {:<5.4} Tilt: {:<5.4}",
                                angleHandler.GetVoltage().first,
                                angleHandler.GetVoltage().second),
                    10, 40, 0.5, cv::Scalar(255, 255, 255), 1);
     // The current angle of pan and tilt
-    vision.PutText(fmt::format("Angle:    Pan: {:<4.4} Tilt: {:<4.4}",
+    vision.PutText(fmt::format("Angle:    Pan: {:<5.4} Tilt: {:<5.4}",
                                angleHandler.GetAngles().first,
                                angleHandler.GetAngles().second),
                    10, 60, 0.5, cv::Scalar(255, 255, 255), 1);
 
     // The setpoint angle of pan and tilt
-    vision.PutText(fmt::format("Setpoint: Pan: {:<4.4} Tilt: {:<4.4}",
+    vision.PutText(fmt::format("Setpoint: Pan: {:<5.4} Tilt: {:<5.4}",
                                angleHandler.GetSetpoints().first,
                                angleHandler.GetSetpoints().second),
                    10, 80, 0.5, cv::Scalar(255, 255, 255), 1);

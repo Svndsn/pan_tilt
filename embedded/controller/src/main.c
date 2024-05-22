@@ -1,23 +1,23 @@
 // FreeRTOS
 #include "FreeRTOS.h"
 #include "queue.h"
-#include "task.h"
 #include "semphr.h"
+#include "task.h"
 
 // Project
-#include "tm4c123gh6pm.h"
-#include "projectdefs.h"
-#include "status_led.h"
-#include "uart0.h"
-#include "spi1.h"
 #include "pid.h"
+#include "projectdefs.h"
+#include "spi1.h"
+#include "status_led.h"
+#include "tm4c123gh6pm.h"
+#include "uart0.h"
 
 // UART0 queues
 xQueueHandle q_uartDebug;
-xQueueHandle q_uartAngle; // Send current angle
+xQueueHandle q_uartAngle;    // Send current angle
 xQueueHandle q_uartSetpoint; // Receive setpoint
-xQueueHandle q_uartVoltage; // Receive setpoint
-xQueueHandle q_uartRawData; // Input buffer
+xQueueHandle q_uartVoltage;  // Receive setpoint
+xQueueHandle q_uartRawData;  // Input buffer
 // UART0 Mutex
 xSemaphoreHandle m_uartDebug;
 xSemaphoreHandle m_uartAngle;
@@ -26,7 +26,7 @@ xSemaphoreHandle m_uartVoltage;
 
 // SPI1 queues
 xQueueHandle q_spiDutyCycle; // Send duty cycle
-xQueueHandle q_spiAngle; // Receive angle
+xQueueHandle q_spiAngle;     // Receive angle
 // SPI1 Mutex
 xSemaphoreHandle m_spiDutyCycle;
 xSemaphoreHandle m_spiAngle;
@@ -41,6 +41,19 @@ void setup_hardware() {
   vStatusLedInit();
   vUart0Init();
   vSpi1Init();
+
+  // Enable buttons
+  // Unlock the GPIO commit control register.
+  GPIO_PORTF_LOCK_R = 0x4C4F434B;
+
+  // Allow changes to PF0
+  GPIO_PORTF_CR_R |= 0x01;
+
+  // Enable the GPIO pins for digital function (PF0 - PF4)
+  GPIO_PORTF_DEN_R |= 0b00010001;
+
+  // Enable internal pull-up (PF4).
+  GPIO_PORTF_PUR_R |= 0b00010001;
 }
 
 int main() {
@@ -65,10 +78,10 @@ int main() {
   m_spiAngle     = xSemaphoreCreateMutex();
 
   // Create the tasks
-  xTaskCreate(vStatusLedTask,  "Status LED",     USERTASK_STACK_SIZE, NULL, LOW, NULL);
+  xTaskCreate(vStatusLedTask,  "Status LED",     USERTASK_STACK_SIZE, NULL, LOW,    NULL);
   xTaskCreate(vUart0Task,      "UART 0 Rx/Tx",   USERTASK_STACK_SIZE, NULL, MEDIUM, NULL);
   xTaskCreate(vSpi1Task,       "SPI 1 Rx/Tx",    USERTASK_STACK_SIZE, NULL, MEDIUM, NULL);
-  xTaskCreate(vControllerTask, "PID controller", USERTASK_STACK_SIZE, NULL, HIGH, NULL);
+  xTaskCreate(vControllerTask, "PID controller", USERTASK_STACK_SIZE, NULL, HIGH,   NULL);
 
   // Start the scheduler
   vTaskStartScheduler();
