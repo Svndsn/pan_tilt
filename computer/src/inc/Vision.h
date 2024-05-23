@@ -9,6 +9,7 @@
 #define IPHONE_13_PRO_FOV_V 40.82
 #define IPHONE_13_PRO_WIDTH 1920
 #define IPHONE_13_PRO_HEIGHT 1080
+// #define 
 #define VIDEO_SCALE 0.5
 
 class Vision {

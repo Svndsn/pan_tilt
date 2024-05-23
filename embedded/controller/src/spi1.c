@@ -5,6 +5,7 @@
 
 #include "tm4c123gh6pm.h"
 #include "emp_type.h"
+#include "uart0.h"
 #include "spi1.h"
 
 #define ANGLE_COUNT_CENTER 512
@@ -148,6 +149,9 @@ void vReceiveCountsSpi(){
         // Should never happen
         continue;
       }
+      // uartDebug_t buffer;
+      // itoa(rxData, buffer.string, 10);
+      // xQueueSendToBack(q_uartDebug, &buffer, 0);
 
       // Check if the data is for pan or tilt
       if (rxData & (1 << 15)) {

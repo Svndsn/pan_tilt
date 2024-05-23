@@ -7,6 +7,7 @@
 #include "pid.h"
 #include "projectdefs.h"
 #include "spi1.h"
+#include "tm4c123gh6pm.h"
 #include "uart0.h"
 
 #define PAN_ANGLE_MIN -180
@@ -39,14 +40,15 @@ static PID_t pidTilt;
 
 void vControllerInit() {
   // Pan PID
-  pidPan.Kp = 0.5f;
-  pidPan.Kd = 0.f;
+  pidPan.Kp = 0.05f;
+  pidPan.Kd = 0.01f;
   pidPan.Ki = 0.f;
 
   pidPan.T = 0.01f; // 100Hz
 
   pidPan.maxLimit = 12.f;  // 12 volts
   pidPan.minLimit = -12.f; // -12 volts
+  pidPan.offsetVoltage = 3.f;
 
   pidPan.prevOutput = 0.f;
   pidPan.prevError = 0.f;
@@ -57,14 +59,15 @@ void vControllerInit() {
   pidPan.measurement = 0.f;
 
   // Tilt PID
-  pidTilt.Kp = 0.5f;
-  pidTilt.Kd = 0.005f;
+  pidTilt.Kp = 0.15f;
+  pidTilt.Kd = 0.01f;
   pidTilt.Ki = 0.f;
 
   pidTilt.T = 0.01f; // 100Hz
 
   pidTilt.maxLimit = 12.f;  // 12 volts
   pidTilt.minLimit = -12.f; // -12 volts
+  pidTilt.offsetVoltage = 3.f;
 
   pidTilt.prevOutput = 0.f;
   pidTilt.prevError = 0.f;
@@ -77,7 +80,7 @@ void vControllerInit() {
 
 void vUpdateController(PID_t *pid) {
   pid->error = pid->setpoint - pid->measurement;
-  if (pid->error < 0.8f && pid->error > -0.8f) {
+  if (pid->error < 0.7f && pid->error > -0.7f) {
     pid->error = 0;
   }
 
@@ -98,8 +101,16 @@ void vUpdateController(PID_t *pid) {
   // Derivative term
   FP32 Dout = pid->Kd * derivative;
 
+  FP32 offset;
+  if (pid->error > 0) {
+    offset = pid->offsetVoltage;
+  } else if (pid->error < 0) {
+    offset = -pid->offsetVoltage;
+  } else {
+    offset = 0;
+  }
   // Calculate total output
-  pid->output = Pout + Iout + Dout;
+  pid->output = Pout + Iout + Dout + offset;
   // pid->output = 0;
 
   // Update previous values
@@ -113,8 +124,6 @@ void vUpdateController(PID_t *pid) {
   } else if (pid->output < pid->minLimit) {
     pid->output = pid->minLimit;
   }
-  // TODO: Maybe add acceleration limits
-  // To avoid the belt slipping/breaking due to sudden changes in direction
 }
 
 void vUpdateSetpoints() {
@@ -228,10 +237,19 @@ void vControllerTask() {
   // Initialize the controller variables
   vControllerInit();
 
+  BOOLEAN controllerEnabled = FALSE;
+
   // Task loop
   while (1) {
     // Get current tick for correct timing
     portTickType xLastWakeTime = xTaskGetTickCount();
+    if ((GPIO_PORTF_DATA_R & 0b00010000)==0) {
+      pidPan.setpoint = pidPan.measurement;
+      pidTilt.setpoint = pidTilt.measurement;
+      controllerEnabled = TRUE;
+    } else if ((GPIO_PORTF_DATA_R & 0b00000001)==0) {
+      controllerEnabled = FALSE;
+    }
 
     // Get the latest setpoint (take all values from q_uartSetpoint)
     vUpdateSetpoints();
@@ -243,8 +261,10 @@ void vControllerTask() {
     vSendAngles();
 
     // Update controller (PID)
-    vUpdateController(&pidPan);
-    vUpdateController(&pidTilt);
+    if (controllerEnabled) {
+      vUpdateController(&pidPan);
+      vUpdateController(&pidTilt);
+    }
 
     // Send the latest output to the motor (q_spiDutyCycle)
     vSendDutyCycles();

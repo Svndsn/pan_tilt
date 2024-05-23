@@ -31,12 +31,11 @@
 
 AngleHandler::AngleHandler() {
   // Connection to serial port
-  int err = m_serialConnection.openDevice(FindSerialDevice().c_str(), 
-                                          115200,
-                                          SERIAL_DATABITS_8, 
-                                          SERIAL_PARITY_EVEN,
+  int err = m_serialConnection.openDevice(FindSerialDevice().c_str(), 115200,
+                                          SERIAL_DATABITS_8, SERIAL_PARITY_EVEN,
                                           SERIAL_STOPBITS_1);
-  if (err < 1) fmt::print("Serial error: Error code: {}\n", err);
+  if (err < 1)
+    fmt::print("Serial error: Error code: {}\n", err);
 
   m_serialConnection.flushReceiver();
   m_RxState = RxState::Type;
@@ -108,7 +107,8 @@ void AngleHandler::SetRelativeAngles(float relPanAngle, float relTiltAngle) {
   SendSetpointUART(Angle::Tilt, relTiltAngle, true);
 }
 
-void AngleHandler::SendSetpointUART(Angle type, float setpoint, bool relative) const{
+void AngleHandler::SendSetpointUART(Angle type, float setpoint,
+                                    bool relative) const {
   // Store the setpoint angle in a union to access the bytes
   union {
     float angle;
@@ -193,7 +193,7 @@ void AngleHandler::ReceiveUART() {
       }
       break;
     }
-    case RxState::Data:{
+    case RxState::Data: {
       // Check if there is enough data
       if (m_RxDataQueue.size() < dataLength) {
         // Not enough data, wait for the rest
@@ -304,7 +304,8 @@ void AngleHandler::ReceiveUART() {
   }
 }
 
-void AngleHandler::CheckSum(uint8_t *data, size_t length, uint8_t &checksum) const{
+void AngleHandler::CheckSum(uint8_t *data, size_t length,
+                            uint8_t &checksum) const {
   for (size_t i = 0; i < length; i++) {
     checksum ^= data[i];
   }
@@ -314,27 +315,26 @@ std::string AngleHandler::FindSerialDevice() const {
   // Find the serial devices connected to the computer
   std::string device{};
 
-  #if defined(__APPLE__)
-    std::vector<std::string> devices;
-    std::string path = "/dev/";
-    // Find all serial devices
-    for (const auto &entry : std::filesystem::directory_iterator(path))
-      if (entry.path().string().find("tty.") != std::string::npos)
-        devices.push_back(entry.path().string());
+#if defined(__APPLE__)
+  std::vector<std::string> devices;
+  std::string path = "/dev/";
+  // Find all serial devices
+  for (const auto &entry : std::filesystem::directory_iterator(path))
+    if (entry.path().string().find("tty.") != std::string::npos)
+      devices.push_back(entry.path().string());
 
-    // Select the serial device
-    for (size_t i = 0; i < devices.size(); i++) {
-      fmt::print("Device {}: {}\n", i, devices[i]);
-    }
-    fmt::print("Select the device index: ");
-    size_t deviceIndex;
-    std::cin >> deviceIndex;
-    assert(!std::cin.fail() && deviceIndex < devices.size() &&
-          "Invalid device index");
-    device = devices[deviceIndex];
-    fmt::print("Selected device: {}\n", devices[deviceIndex]);
-  #endif
+  // Select the serial device
+  for (size_t i = 0; i < devices.size(); i++) {
+    fmt::print("Device {}: {}\n", i, devices[i]);
+  }
+  fmt::print("Select the device index: ");
+  size_t deviceIndex;
+  std::cin >> deviceIndex;
+  assert(!std::cin.fail() && deviceIndex < devices.size() &&
+         "Invalid device index");
+  device = devices[deviceIndex];
+  fmt::print("Selected device: {}\n", devices[deviceIndex]);
+#endif
 
   return device;
 }
-
