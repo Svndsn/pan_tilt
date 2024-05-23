@@ -50,9 +50,10 @@ int main() {
     angleHandler.ReceiveUART();
 
     if (controller.IsHomePressed()) {
-      angleHandler.SetAbsoluteAngles(0.f, 0.f);
       fmt::print("Homing\n");
-      fmt::print("Tracking mode: {}\n", (int)controller.GetTracking());
+      for (int i = 0; i < 10; ++i) {
+        angleHandler.SetAbsoluteAngles(0.f, 0.f);
+      }
     }
 
     // Handle tracking
@@ -96,8 +97,8 @@ int main() {
 
         // Calculate the angles based on
         const auto [pan2Center, tilt2Center] = vision.GetAngles();
-          const auto [pan, tilt] = angleHandler.GetAngles();
-        angleHandler.SetAbsoluteAngles(pan + pan2Center, 0);
+        const auto [pan, tilt] = angleHandler.GetAngles();
+        angleHandler.SetAbsoluteAngles(pan + pan2Center, tilt - tilt2Center);
 
         // Press the confirm button (X) to stop tracking
         if (controller.IsConfirmPressed()) {

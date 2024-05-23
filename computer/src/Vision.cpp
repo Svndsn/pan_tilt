@@ -81,17 +81,16 @@ void Vision::UpdateTracker() {
   // Update the tracker with the current frame
   if(m_tracker->update(m_frame, m_trackingBox)){
     // Add line to center
-    int xMid = m_frame.cols / 2;
-    int yMid = m_frame.rows / 2;
+    static int xMid = m_frame.cols / 2;
+    static int yMid = m_frame.rows / 2;
     int xBoxMid = m_trackingBox.x + m_trackingBox.width / 2;
     int yBoxMid = m_trackingBox.y + m_trackingBox.height / 2;
-    m_panAngle2Center = xBoxMid - xMid;
-    m_tiltAngle2Center = yBoxMid - yMid;
-    cv::line(m_frame, cv::Point(xMid, yMid), 
-             cv::Point(xBoxMid, yBoxMid),
+    m_panPixels2Center = xBoxMid - xMid;
+    m_tiltPixels2Center = yBoxMid - yMid;
+    cv::line(m_frame, cv::Point(xMid, yMid), cv::Point(xBoxMid, yBoxMid),
              cv::Scalar(0, 255, 0),1, cv::LINE_AA);
     cv::rectangle(m_frame, m_trackingBox, cv::Scalar(0, 255, 255), 2);
-  } else if(errorCount > 60){
+  } else if(errorCount > 30){
     fmt::print("Vision Tracking: Lost Target\n");
     fmt::print("Vision Tracking: Set New Target\n");
     m_trackingActive = false;
@@ -129,10 +128,8 @@ void Vision::UpdateCamera() {
 }
 
 std::pair<float, float> Vision::GetAngles() const {
-  float panAngle = m_panAngle2Center / (IPHONE_13_PRO_WIDTH * VIDEO_SCALE) *
-                     IPHONE_13_PRO_FOV_H;
-  float tiltAngle = m_tiltAngle2Center / (IPHONE_13_PRO_HEIGHT * VIDEO_SCALE) *
-                      IPHONE_13_PRO_FOV_V;
+  float panAngle = atan(m_panPixels2Center / B_HORIZONTAL) * RAD_TO_DEG;
+  float tiltAngle = atan(m_tiltPixels2Center / B_VERTICAL) * RAD_TO_DEG;
   return std::make_pair(panAngle, tiltAngle);
 }
 

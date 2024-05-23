@@ -40,15 +40,15 @@ static PID_t pidTilt;
 
 void vControllerInit() {
   // Pan PID
-  pidPan.Kp = 0.05f;
-  pidPan.Kd = 0.01f;
+  pidPan.Kp = 0.12f;
+  pidPan.Kd = 0.02f;
   pidPan.Ki = 0.f;
 
   pidPan.T = 0.01f; // 100Hz
 
   pidPan.maxLimit = 12.f;  // 12 volts
   pidPan.minLimit = -12.f; // -12 volts
-  pidPan.offsetVoltage = 3.f;
+  pidPan.offsetVoltage = 2.5f;
 
   pidPan.prevOutput = 0.f;
   pidPan.prevError = 0.f;
@@ -59,15 +59,15 @@ void vControllerInit() {
   pidPan.measurement = 0.f;
 
   // Tilt PID
-  pidTilt.Kp = 0.15f;
-  pidTilt.Kd = 0.01f;
+  pidTilt.Kp = 0.12f;
+  pidTilt.Kd = 0.00f;
   pidTilt.Ki = 0.f;
 
   pidTilt.T = 0.01f; // 100Hz
 
   pidTilt.maxLimit = 12.f;  // 12 volts
   pidTilt.minLimit = -12.f; // -12 volts
-  pidTilt.offsetVoltage = 3.f;
+  pidTilt.offsetVoltage = 2.3f;
 
   pidTilt.prevOutput = 0.f;
   pidTilt.prevError = 0.f;
@@ -248,6 +248,8 @@ void vControllerTask() {
       pidTilt.setpoint = pidTilt.measurement;
       controllerEnabled = TRUE;
     } else if ((GPIO_PORTF_DATA_R & 0b00000001)==0) {
+      pidPan.output = 0;
+      pidTilt.output = 0;
       controllerEnabled = FALSE;
     }
 
