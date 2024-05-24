@@ -40,8 +40,8 @@ static PID_t pidTilt;
 
 void vControllerInit() {
   // Pan PID
-  pidPan.Kp = 0.2f;
-  pidPan.Kd = 0.0f;
+  pidPan.Kp = 0.3f;
+  pidPan.Kd = 0.01f;
   pidPan.Ki = 0.0f;
 
   pidPan.T = 0.01f; // 100Hz
@@ -49,7 +49,7 @@ void vControllerInit() {
   pidPan.maxLimit = 12.f;  // 12 volts
   pidPan.minLimit = -12.f; // -12 volts
   pidPan.angleStep = 1.4f;
-  pidPan.offsetVoltage = 2.7f;
+  pidPan.offsetVoltage = 2.5f;
 
   pidPan.prevOutput = 0.f;
   pidPan.prevError = 0.f;
@@ -69,7 +69,7 @@ void vControllerInit() {
   pidTilt.maxLimit = 12.f;  // 12 volts
   pidTilt.minLimit = -12.f; // -12 volts
   pidTilt.angleStep = 0.8f;
-  pidTilt.offsetVoltage = 2.0f;
+  pidTilt.offsetVoltage = 2.3f;
 
   pidTilt.prevOutput = 0.f;
   pidTilt.prevError = 0.f;
@@ -104,15 +104,18 @@ void vUpdateController(PID_t *pid) {
   // Derivative term
   FP32 Dout = pid->Kd * derivative;
 
-  // Calculate total output
-  pid->output = Pout + Iout + Dout;
-  // pid->output = 0;
-
-  if (pid->output > 0) {
-    pid->output += pid->offsetVoltage;
-  } else if (pid->output < 0){
-    pid->output -= pid->offsetVoltage;
+  FP32 offset;
+  if (pid->error > 0) {
+    offset = pid->offsetVoltage;
+  } else if (pid->error < 0) {
+    offset = -pid->offsetVoltage;
+  } else {
+    offset = 0;
   }
+
+  // Calculate total output
+  pid->output = Pout + Iout + Dout + offset;
+  // pid->output = 0;
 
   // Update previous values
   pid->prevOutput = pid->output; // Done before limiting (use for anti-windup)
