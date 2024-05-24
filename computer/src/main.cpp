@@ -54,6 +54,7 @@ int main() {
       for (int i = 0; i < 10; ++i) {
         angleHandler.SetAbsoluteAngles(0.f, 0.f);
       }
+      controller.SetTracking(Tracking::NONE);
     }
 
     // Handle tracking
@@ -99,6 +100,7 @@ int main() {
         const auto [pan2Center, tilt2Center] = vision.GetAngles();
         const auto [pan, tilt] = angleHandler.GetAngles();
         angleHandler.SetAbsoluteAngles(pan + pan2Center, tilt - tilt2Center);
+        // angleHandler.SetRelativeAngles(pan2Center, -tilt2Center);
 
         // Press the confirm button (X) to stop tracking
         if (controller.IsConfirmPressed()) {

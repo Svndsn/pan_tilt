@@ -37,6 +37,9 @@ public:
 
   // Get tracking of systen
   Tracking GetTracking() const;
+
+  // Set tracking of systen
+  void SetTracking(Tracking tracking);
   
   // Is comfirm button pressed
   bool IsConfirmPressed();

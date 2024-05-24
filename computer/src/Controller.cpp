@@ -225,6 +225,8 @@ bool Controller::IsHomePressed(){
 
 Tracking Controller::GetTracking() const { return m_tracking; }
 
+void Controller::SetTracking(Tracking tracking) { m_tracking = tracking; }
+
 std::pair<float, float> Controller::NomalizeAxis(int16_t &x, int16_t &y) const {
   float fx = x;
   float fy = y;
