@@ -9,6 +9,8 @@ typedef struct {
   FP32 T;
   // Motor voltage limits
   FP32 maxLimit, minLimit;
+  // Minimum angle step
+  FP32 angleStep;
   // Motor offset voltage where motor start moving (feed forward)
   FP32 offsetVoltage;
   // Measurement

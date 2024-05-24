@@ -41,14 +41,15 @@ static PID_t pidTilt;
 void vControllerInit() {
   // Pan PID
   pidPan.Kp = 0.2f;
-  pidPan.Kd = 0.01f;
-  pidPan.Ki = 0.f;
+  pidPan.Kd = 0.0f;
+  pidPan.Ki = 0.0f;
 
   pidPan.T = 0.01f; // 100Hz
 
   pidPan.maxLimit = 12.f;  // 12 volts
   pidPan.minLimit = -12.f; // -12 volts
-  pidPan.offsetVoltage = 2.5f;
+  pidPan.angleStep = 1.4f;
+  pidPan.offsetVoltage = 2.7f;
 
   pidPan.prevOutput = 0.f;
   pidPan.prevError = 0.f;
@@ -59,15 +60,16 @@ void vControllerInit() {
   pidPan.measurement = 0.f;
 
   // Tilt PID
-  pidTilt.Kp = 0.2f;
-  pidTilt.Kd = 0.01f;
-  pidTilt.Ki = 0.f;
+  pidTilt.Kp = 0.35;
+  pidTilt.Kd = 0.00f;
+  pidTilt.Ki = 0.0f;
 
   pidTilt.T = 0.01f; // 100Hz
 
   pidTilt.maxLimit = 12.f;  // 12 volts
   pidTilt.minLimit = -12.f; // -12 volts
-  pidTilt.offsetVoltage = 2.3f;
+  pidTilt.angleStep = 0.8f;
+  pidTilt.offsetVoltage = 2.0f;
 
   pidTilt.prevOutput = 0.f;
   pidTilt.prevError = 0.f;
@@ -80,7 +82,8 @@ void vControllerInit() {
 
 void vUpdateController(PID_t *pid) {
   pid->error = pid->setpoint - pid->measurement;
-  if (pid->error < 0.7f && pid->error > -0.7f) {
+  if (pid->error < (pid->angleStep - 0.1f) &&
+      pid->error > (-pid->angleStep + 0.1f)) {
     pid->error = 0;
   }
 
@@ -101,17 +104,15 @@ void vUpdateController(PID_t *pid) {
   // Derivative term
   FP32 Dout = pid->Kd * derivative;
 
-  FP32 offset;
-  if (pid->error > 0) {
-    offset = pid->offsetVoltage;
-  } else if (pid->error < 0) {
-    offset = -pid->offsetVoltage;
-  } else {
-    offset = 0;
-  }
   // Calculate total output
-  pid->output = Pout + Iout + Dout + offset;
+  pid->output = Pout + Iout + Dout;
   // pid->output = 0;
+
+  if (pid->output > 0) {
+    pid->output += pid->offsetVoltage;
+  } else if (pid->output < 0){
+    pid->output -= pid->offsetVoltage;
+  }
 
   // Update previous values
   pid->prevOutput = pid->output; // Done before limiting (use for anti-windup)
@@ -210,6 +211,7 @@ void vSendDutyCycles() {
       tiltDuty = -1023;
     }
     spiDutyCycle_t panDutyCycle = {PAN, panDuty};
+
     spiDutyCycle_t tiltDutyCycle = {TILT, tiltDuty};
     
     // Send the duty cycles (output from the PID controller
