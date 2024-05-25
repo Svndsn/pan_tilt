@@ -50,9 +50,11 @@ int main() {
     angleHandler.ReceiveUART();
 
     if (controller.IsHomePressed()) {
-      angleHandler.SetAbsoluteAngles(0.f, 0.f);
       fmt::print("Homing\n");
-      fmt::print("Tracking mode: {}\n", (int)controller.GetTracking());
+      for (int i = 0; i < 10; ++i) {
+        angleHandler.SetAbsoluteAngles(0.f, 0.f);
+      }
+      controller.SetTracking(Tracking::NONE);
     }
 
     // Handle tracking
@@ -62,7 +64,7 @@ int main() {
       break;
     case Tracking::JOYSTICK: {
         const auto [pan, tilt] = controller.GetLeftAxis();
-        angleHandler.SetRelativeAngles(pan * 10, -tilt * 10);
+        angleHandler.SetRelativeAngles(pan * 20, -tilt * 15);
         vision.PutText("Joystick Tracking", 10, 20, 0.5, cv::Scalar(0, 255, 0), 1);
       break;
     }
@@ -96,8 +98,9 @@ int main() {
 
         // Calculate the angles based on
         const auto [pan2Center, tilt2Center] = vision.GetAngles();
-          const auto [pan, tilt] = angleHandler.GetAngles();
-        angleHandler.SetAbsoluteAngles(pan + pan2Center, 0);
+        const auto [pan, tilt] = angleHandler.GetAngles();
+        angleHandler.SetAbsoluteAngles(pan + pan2Center, tilt - tilt2Center);
+        // angleHandler.SetRelativeAngles(pan2Center, -tilt2Center);
 
         // Press the confirm button (X) to stop tracking
         if (controller.IsConfirmPressed()) {

@@ -3,14 +3,19 @@
 #include <opencv2/video/tracking.hpp>
 #include <opencv2/videoio.hpp>
 #include <string>
+#include <math.h>
 
 
 #define IPHONE_13_PRO_FOV_H 69.39
 #define IPHONE_13_PRO_FOV_V 40.82
 #define IPHONE_13_PRO_WIDTH 1920
 #define IPHONE_13_PRO_HEIGHT 1080
-// #define 
 #define VIDEO_SCALE 0.5
+// Calculate the angle relation
+const float DEG_TO_RAD = M_PI / 180.f;
+const float RAD_TO_DEG = 180.f / M_PI;
+const float B_HORIZONTAL = ((IPHONE_13_PRO_WIDTH * VIDEO_SCALE) / 2.f) / (tan(IPHONE_13_PRO_FOV_H / 2.f * DEG_TO_RAD));
+const float B_VERTICAL = ((IPHONE_13_PRO_HEIGHT * VIDEO_SCALE) / 2.f) / (tan(IPHONE_13_PRO_FOV_V / 2.f * DEG_TO_RAD));
 
 class Vision {
 public:
@@ -60,6 +65,6 @@ private:
   cv::Ptr<cv::Tracker> m_tracker;
 
   bool m_trackingActive;
-  int16_t m_panAngle2Center;
-  int16_t m_tiltAngle2Center;
+  int16_t m_panPixels2Center;
+  int16_t m_tiltPixels2Center;
 };

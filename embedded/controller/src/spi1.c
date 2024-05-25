@@ -12,7 +12,7 @@
 // 360 / 450
 #define ANGLE_COUNT_RATIO_TILT 0.8f 
 // 360 / 360
-#define ANGLE_COUNT_RATIO_PAN 1 
+#define ANGLE_COUNT_RATIO_PAN 1.4f 
 
 // SPI1 queues
 extern xQueueHandle q_spiDutyCycle; // Send duty cycle
@@ -149,12 +149,12 @@ void vReceiveCountsSpi(){
         // Should never happen
         continue;
       }
-      // uartDebug_t buffer;
-      // itoa(rxData, buffer.string, 10);
-      // xQueueSendToBack(q_uartDebug, &buffer, 0);
 
       // Check if the data is for pan or tilt
       if (rxData & (1 << 15)) {
+        // uartDebug_t buffer;
+        // itoa(rxData, buffer.string, 10);
+        // xQueueSendToBack(q_uartDebug, &buffer, 0);
         vDataToAngle(rxData, &panAngle);
         xQueueSendToBack(q_spiAngle, &panAngle, 0);
       } else {

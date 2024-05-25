@@ -40,15 +40,16 @@ static PID_t pidTilt;
 
 void vControllerInit() {
   // Pan PID
-  pidPan.Kp = 0.05f;
+  pidPan.Kp = 0.3f;
   pidPan.Kd = 0.01f;
-  pidPan.Ki = 0.f;
+  pidPan.Ki = 0.0f;
 
   pidPan.T = 0.01f; // 100Hz
 
   pidPan.maxLimit = 12.f;  // 12 volts
   pidPan.minLimit = -12.f; // -12 volts
-  pidPan.offsetVoltage = 3.f;
+  pidPan.angleStep = 1.4f;
+  pidPan.offsetVoltage = 2.5f;
 
   pidPan.prevOutput = 0.f;
   pidPan.prevError = 0.f;
@@ -59,15 +60,16 @@ void vControllerInit() {
   pidPan.measurement = 0.f;
 
   // Tilt PID
-  pidTilt.Kp = 0.15f;
-  pidTilt.Kd = 0.01f;
-  pidTilt.Ki = 0.f;
+  pidTilt.Kp = 0.35;
+  pidTilt.Kd = 0.00f;
+  pidTilt.Ki = 0.0f;
 
   pidTilt.T = 0.01f; // 100Hz
 
   pidTilt.maxLimit = 12.f;  // 12 volts
   pidTilt.minLimit = -12.f; // -12 volts
-  pidTilt.offsetVoltage = 3.f;
+  pidTilt.angleStep = 0.8f;
+  pidTilt.offsetVoltage = 2.3f;
 
   pidTilt.prevOutput = 0.f;
   pidTilt.prevError = 0.f;
@@ -80,7 +82,8 @@ void vControllerInit() {
 
 void vUpdateController(PID_t *pid) {
   pid->error = pid->setpoint - pid->measurement;
-  if (pid->error < 0.7f && pid->error > -0.7f) {
+  if (pid->error < (pid->angleStep - 0.1f) &&
+      pid->error > (-pid->angleStep + 0.1f)) {
     pid->error = 0;
   }
 
@@ -109,6 +112,7 @@ void vUpdateController(PID_t *pid) {
   } else {
     offset = 0;
   }
+
   // Calculate total output
   pid->output = Pout + Iout + Dout + offset;
   // pid->output = 0;
@@ -210,6 +214,7 @@ void vSendDutyCycles() {
       tiltDuty = -1023;
     }
     spiDutyCycle_t panDutyCycle = {PAN, panDuty};
+
     spiDutyCycle_t tiltDutyCycle = {TILT, tiltDuty};
     
     // Send the duty cycles (output from the PID controller
@@ -248,6 +253,8 @@ void vControllerTask() {
       pidTilt.setpoint = pidTilt.measurement;
       controllerEnabled = TRUE;
     } else if ((GPIO_PORTF_DATA_R & 0b00000001)==0) {
+      pidPan.output = 0;
+      pidTilt.output = 0;
       controllerEnabled = FALSE;
     }
 
