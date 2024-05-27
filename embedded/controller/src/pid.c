@@ -40,7 +40,7 @@ static PID_t pidTilt;
 
 void vControllerInit() {
   // Pan PID
-  pidPan.Kp = 0.3f;
+  pidPan.Kp = 0.22f;
   pidPan.Kd = 0.01f;
   pidPan.Ki = 0.0f;
 
