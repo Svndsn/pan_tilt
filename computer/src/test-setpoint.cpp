@@ -17,7 +17,7 @@
 #define FRAME_TIME 1000 / FPS
 
 int main() {
-  std::array<float, 2> SetAngles = {0.f, 90.f};
+  std::array<float, 2> SetAngles = {-90.f, 90.f};
 
   // Initialize SDL and controller
   Controller controller;
