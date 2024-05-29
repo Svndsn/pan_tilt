@@ -48,7 +48,7 @@ void vControllerInit() {
 
   pidPan.maxLimit = 12.f;  // 12 volts
   pidPan.minLimit = -12.f; // -12 volts
-  pidPan.angleStep = 1.4f;
+  pidPan.angleStep = 1.324f;
   pidPan.offsetVoltage = 2.5f;
 
   pidPan.prevOutput = 0.f;
@@ -60,8 +60,8 @@ void vControllerInit() {
   pidPan.measurement = 0.f;
 
   // Tilt PID
-  pidTilt.Kp = 0.35;
-  pidTilt.Kd = 0.00f;
+  pidTilt.Kp = 0.25;
+  pidTilt.Kd = 0.0f;
   pidTilt.Ki = 0.0f;
 
   pidTilt.T = 0.01f; // 100Hz

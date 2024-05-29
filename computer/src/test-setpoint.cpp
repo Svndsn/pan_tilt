@@ -17,8 +17,7 @@
 #define FRAME_TIME 1000 / FPS
 
 int main() {
-  std::array<float, 5> panSetAngles = {30, 0, 90, 0, 100};
-  std::array<float, 5> tiltSetAngles = {30, 0, 90, 0, 180};
+  std::array<float, 2> SetAngles = {0, 90};
 
   // Initialize SDL and controller
   Controller controller;
@@ -28,34 +27,42 @@ int main() {
 
   // Generate file for logging
   // Get time as file name
-  std::string filename = fmt::format("data/{}.csv", std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
+  std::string filename = fmt::format("{}.csv", std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
   fmt::print("File: {}\n", filename);
   std::ofstream file(filename, std::ios::out);
-      file << fmt::format( "{},{},{},{},{},{},{}\n", 
+      file << fmt::format( "{},{},{},{},{},{},{},{}\n", "TestN",
                           "panSetAngles", "tiltSetAngles", 
                           "currentTimeMS","panAngle", "tiltAngle", 
                           "panVoltage", "tiltVoltage");
   // For timings
   auto startTimeMS = SDL_GetTicks();
 
-  for (int i = 0; i < 5; ++i) {
+  int count = 0;
+  for (int i = 0; i < 60; ++i) {
     while (1) {
-      angleHandler.SetAbsoluteAngles(panSetAngles[i], tiltSetAngles[i]);
+      angleHandler.SetAbsoluteAngles(SetAngles[i%2], SetAngles[i%2]);
       angleHandler.ReceiveUART();
       // Current time
       auto currentTimeMS = SDL_GetTicks() - startTimeMS;
       auto [panAngle, tiltAngle] = angleHandler.GetAngles();
       auto [panVoltage, tiltVoltage] = angleHandler.GetVoltage();
-      file << fmt::format( "{},{},{},{},{},{},{}\n", 
-                          panSetAngles[i], tiltSetAngles[i], 
+      file << fmt::format( "{},{},{},{},{},{},{},{}\n", i/2,
+                          SetAngles[i%2], SetAngles[i%2], 
                           currentTimeMS,panAngle, tiltAngle, 
                           panVoltage, tiltVoltage);
-      fmt::print ("{},{},{},{},{},{}\n", panSetAngles[i], tiltSetAngles[i], panAngle, tiltAngle, panVoltage, tiltVoltage);
+      fmt::print ("{},{},{}\n",i/2, panAngle, tiltAngle);
       SDL_Delay(5);
 
-      if(panSetAngles[i]-1.3 < panAngle && panAngle < panSetAngles[i]+1.3 && tiltSetAngles[i]-0.7 < tiltAngle && tiltAngle < tiltSetAngles[i]+0.7){
-        SDL_Delay(2000);
-        break;
+      if (SetAngles[i % 2] - 1.3 < panAngle &&
+          panAngle < SetAngles[i % 2] + 1.3 &&
+          SetAngles[i % 2] - 0.7 < tiltAngle &&
+          tiltAngle < SetAngles[i % 2] + 0.7) {
+        count++;
+        if (count > 100) {
+          SDL_Delay(500);
+          count = 0;
+          break;
+        }
       }
     }
   }

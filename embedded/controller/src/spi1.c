@@ -12,7 +12,7 @@
 // 360 / 450
 #define ANGLE_COUNT_RATIO_TILT 0.8f 
 // 360 / 360
-#define ANGLE_COUNT_RATIO_PAN 1.4f 
+#define ANGLE_COUNT_RATIO_PAN 1.324f 
 
 // SPI1 queues
 extern xQueueHandle q_spiDutyCycle; // Send duty cycle

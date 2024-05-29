@@ -64,7 +64,7 @@ int main() {
       break;
     case Tracking::JOYSTICK: {
         const auto [pan, tilt] = controller.GetLeftAxis();
-        angleHandler.SetRelativeAngles(pan * 20, -tilt * 15);
+        angleHandler.SetRelativeAngles(pan * 20, -tilt * 10);
         vision.PutText("Joystick Tracking", 10, 20, 0.5, cv::Scalar(0, 255, 0), 1);
       break;
     }
