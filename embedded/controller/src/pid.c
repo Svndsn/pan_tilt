@@ -40,7 +40,7 @@ static PID_t pidTilt;
 
 void vControllerInit() {
   // Pan PID
-  pidPan.Kp = 0.18f;
+  pidPan.Kp = 0.2f;
   pidPan.Kd = 0.02f;
   pidPan.Ki = 0.0f;
 
@@ -248,6 +248,7 @@ void vControllerTask() {
   while (1) {
     // Get current tick for correct timing
     portTickType xLastWakeTime = xTaskGetTickCount();
+
     if ((GPIO_PORTF_DATA_R & 0b00010000)==0) {
       pidPan.setpoint = pidPan.measurement;
       pidTilt.setpoint = pidTilt.measurement;
