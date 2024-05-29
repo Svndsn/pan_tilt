@@ -48,7 +48,7 @@ void vControllerInit() {
 
   pidPan.maxLimit = 12.f;  // 12 volts
   pidPan.minLimit = -12.f; // -12 volts
-  pidPan.angleStep = 1.324f;
+  pidPan.angleStep = 1.333f;
   pidPan.offsetVoltage = 2.5f;
 
   pidPan.prevOutput = 0.f;
