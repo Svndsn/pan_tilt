@@ -40,8 +40,8 @@ static PID_t pidTilt;
 
 void vControllerInit() {
   // Pan PID
-  pidPan.Kp = 0.22f;
-  pidPan.Kd = 0.01f;
+  pidPan.Kp = 0.20f;
+  pidPan.Kd = 0.02f;
   pidPan.Ki = 0.0f;
 
   pidPan.T = 0.01f; // 100Hz
@@ -60,7 +60,7 @@ void vControllerInit() {
   pidPan.measurement = 0.f;
 
   // Tilt PID
-  pidTilt.Kp = 0.25;
+  pidTilt.Kp = 0.35;
   pidTilt.Kd = 0.0f;
   pidTilt.Ki = 0.0f;
 
